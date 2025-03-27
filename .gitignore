@@ -1,0 +1,28 @@
+# === Python / FastAPI ===
+__pycache__/
+
+# Virtual environments
+.venv/
+env/
+../.env
+venv/
+ENV/
+.pyvenv/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+
+# IDE / editor settings
+.vscode/
+
+# Python egg metadata
+*.egg-info/
+dist/
+build/
+
+# VS Code extension stuff
+.history/
