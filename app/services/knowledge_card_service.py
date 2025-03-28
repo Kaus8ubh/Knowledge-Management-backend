@@ -1,5 +1,5 @@
-from utils import decode_access_token
-from models import knowledge_card_model
+from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail
+from models import knowledge_card_model, KnowledgeCardRequest
 from dao import knowledge_card_dao
 
 class KnowledgeCardService:
@@ -37,5 +37,69 @@ class KnowledgeCardService:
             print(f"Error getting knowledge cards: {exception}")
             return None
         
+    def process_knowledge_card(self, knowledge_card_data: KnowledgeCardRequest):
+        """
+        Usage:Scrape content, get title, summarize, generate tags, embedd the title and store the knowledge card.
+        Parameters:
+            user_id (str): The ID of the user who owns this knowledge card
+            source_url (str): The URL of the source content
+            note (str): Additional notes about the content
+        Returns:
+            str: The ID of the inserted knowledge card
+        """
+        try:
+            decoded_token = decode_access_token(knowledge_card_data.token)
+            
+            user_id = decoded_token["userId"]
+            note = knowledge_card_data.note
+            thumbnail = get_thumbnail()
+            source_url = knowledge_card_data.source_url
 
+            if source_url:
+                # Scrape content from the given URL
+                content = scraper.scrape_web(source_url)
+                if not content:
+                    return None  
+
+                # Extract and clean body content
+                body_content = scraper.extract_body_content(content)
+                print("body done")
+                cleaned_content = scraper.clean_body_content(body_content)
+                chunks = scraper.split_content(cleaned_content)
+                
+                summary = gemini_text_processor.summarize_text(chunks)
+                print("summary generated....")
+                # Extract title and process text
+                title = gemini_text_processor.get_title(summary)
+                print("title done")
+                # extract tags from suummary
+                tags = gemini_text_processor.generate_tags(summary)
+                print("tags done")
+                embedding = embedder_for_title.embed_text(title)
+                print("embedding done")
+                
+            else:
+                title="Untitled"
+                summary="No Summary Found"
+                tags=[]
+                embedding=[]
+                source_url=""
+
+            # insert the data 
+            return knowledge_card_dao.insert_knowledge_card(
+                user_id=user_id,
+                title=title,
+                summary=summary,
+                tags=tags,
+                note=note,
+                embedding=embedding,
+                source_url=source_url,
+                thumbnail=thumbnail,
+                favourite= False,
+                archive= False
+            )
+        
+        except Exception as exception:
+            print(f"Error processing knowledge card: {exception}")
+            return None
 

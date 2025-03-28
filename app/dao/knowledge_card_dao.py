@@ -41,3 +41,38 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
         
+    def insert_knowledge_card(self, user_id: str, title: str, summary: str, tags: list, note: str, embedding: list,
+                              source_url: str, thumbnail: str, favourite: bool, archive: bool):
+        """
+        Usage:Insert a knowledge card into MongoDB"
+        Parameters:
+            user_id (str): The ID of the user who owns this knowledge card
+            title (str): The title of the knowledge card
+            summary (str): A summary of the content
+            tags (list): A list of tags associated with the content
+            note (str): Additional notes about the content
+            embedding (list): Vector representation of the title for semantic search
+            source_url (str): Original source URL of the content
+        Returns:
+            str: The ID of the inserted knowledge card
+        """
+        try:
+            knowledge_card = {
+                "user_id": ObjectId(user_id),
+                "title": title,
+                "summary": summary,
+                "tags": tags,
+                "note": note,
+                "created_at": datetime.utcnow().isoformat(),
+                "embedded_vector": embedding,
+                "source_url": source_url,
+                "thumbnail": thumbnail,
+                "favourite": favourite,
+                "archive": archive
+            }
+            self.knowledge_cards_collection.insert_one(knowledge_card)
+            return title
+
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
