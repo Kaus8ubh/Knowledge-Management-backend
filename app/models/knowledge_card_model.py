@@ -16,5 +16,7 @@ class KnowledgeCard(BaseModel):
     favourite: Optional[bool]
     archive: Optional[bool]
 
-
-
+class KnowledgeCardRequest(BaseModel):
+    token: str
+    source_url: Optional[str]
+    note: Optional[str]
