@@ -103,3 +103,32 @@ class KnowledgeCardService:
             print(f"Error processing knowledge card: {exception}")
             return None
 
+    def edit_knowledge_card(self, details: knowledge_card_model):
+        """
+        Usage: Edit a knowledge card.
+        Parameters: knowledge_card_model: The details of the knowledge card to be edited.
+        Returns: dict: The details of the edited knowledge card.        
+        """
+        try:
+            
+            card_id = details.card_id
+            user_id = details.user_id
+            summary = details.summary
+            note = details.note
+
+            updates = {}
+            if summary is not None:
+                updates["summary"] = summary
+            if note is not None:
+                updates["note"] = note
+
+            if not updates:
+                return "no changes updated"
+
+            result = knowledge_card_dao.update_card_details(card_id=card_id,user_id=user_id,updates=updates)
+
+            return result
+
+        except Exception as exception:
+            print(f"Error editing the card: {exception}")
+            return None
