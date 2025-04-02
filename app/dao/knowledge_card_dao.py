@@ -76,3 +76,26 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
+        
+    def update_card_details(self, card_id:str, user_id:str, updates:dict):
+        """
+        Usage: Retrieve a specific card by its id.
+        Parameters: card_id (str): The ID of the card.
+        Returns: Details of a knowledge cards.
+        """
+        try:
+            if not ObjectId.is_valid(card_id) or not ObjectId.is_valid(user_id):
+                return "Invalid card ID or user ID."
+
+            result = self.knowledge_cards_collection.update_one(
+                {"user_id": ObjectId(user_id), "_id": ObjectId(card_id)},  # Filter by card ID
+                {"$set": updates}  # Apply updates
+        )
+            if result.modified_count > 0:
+                return "Knowledge card updated successfully."
+            else:
+                return "No changes made or card not found."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to update the knowledge card."

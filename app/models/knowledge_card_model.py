@@ -20,3 +20,9 @@ class KnowledgeCardRequest(BaseModel):
     token: str
     source_url: Optional[str]
     note: Optional[str]
+
+class EditKnowledgeCard(BaseModel):
+    card_id: str
+    user_id: str
+    summary: Optional[str]
+    note: Optional[str]

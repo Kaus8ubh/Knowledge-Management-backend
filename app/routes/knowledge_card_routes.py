@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard
 from services import knowledge_card_service
 
 knowledge_card_router = APIRouter()
@@ -19,3 +19,9 @@ async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
     if not card_data:
         raise HTTPException(status_code=400, detail="Failed to process knowledge card")
     return JSONResponse({ "message": "Knowledge card '{card_data}' added successfully" })
+
+@knowledge_card_router.put("/")
+async def edit_knowledge_card(details: EditKnowledgeCard):
+    """API endpoint to process editing by user"""
+    edited_card = knowledge_card_service.edit_knowledge_card(details)
+    return edited_card
