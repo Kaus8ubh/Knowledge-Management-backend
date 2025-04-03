@@ -13,3 +13,4 @@ class Config:
     HF_TOKEN = os.getenv("HF_TOKEN")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+    AUTH = os.getenv("AUTH")
