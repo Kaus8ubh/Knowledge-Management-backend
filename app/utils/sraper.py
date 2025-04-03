@@ -1,9 +1,9 @@
 from selenium.webdriver import Remote, ChromeOptions
 from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
 from bs4 import BeautifulSoup
+from config import Config
 
-AUTH = 'brd-customer-hl_b5e721dc-zone-scraping_raw:iehizdgxsda8'
-SBR_WEBDRIVER = f'https://{AUTH}@brd.superproxy.io:9515'
+SBR_WEBDRIVER = f'https://{Config.AUTH}@brd.superproxy.io:9515'
 
 class Scraper:
 
