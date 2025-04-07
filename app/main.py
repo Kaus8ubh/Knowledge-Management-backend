@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import auth_router, knowledge_card_router
+from routes import auth_router, knowledge_card_router, card_cluster_router
 
 app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +13,7 @@ app.add_middleware(
 )
 app.include_router(auth_router, prefix="/api")
 app.include_router(knowledge_card_router,prefix="/knowledge-card")
+app.include_router(card_cluster_router, prefix="/suits")
 
 @app.get("/")
 def home():

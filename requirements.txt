@@ -16,3 +16,5 @@ requests
 retry
 mistralai
 google-generativeai
+numpy
+scikit-learn

@@ -1,6 +1,7 @@
 from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail
 from models import knowledge_card_model, KnowledgeCardRequest
 from dao import knowledge_card_dao
+from services.card_cluster_service import ClusteringServices
 
 class KnowledgeCardService:
 
@@ -51,54 +52,58 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(knowledge_card_data.token)
             
             user_id = decoded_token["userId"]
-            note = knowledge_card_data.note
-            thumbnail = get_thumbnail()
-            source_url = knowledge_card_data.source_url
+        #     note = knowledge_card_data.note
+        #     thumbnail = get_thumbnail()
+        #     source_url = knowledge_card_data.source_url
 
-            if source_url:
-                # Scrape content from the given URL
-                content = scraper.scrape_web(source_url)
-                if not content:
-                    return None  
+        #     if source_url:
+        #         # Scrape content from the given URL
+        #         content = scraper.scrape_web(source_url)
+        #         if not content:
+        #             return None  
 
-                # Extract and clean body content
-                body_content = scraper.extract_body_content(content)
-                print("body done")
-                cleaned_content = scraper.clean_body_content(body_content)
-                chunks = scraper.split_content(cleaned_content)
+        #         # Extract and clean body content
+        #         body_content = scraper.extract_body_content(content)
+        #         print("body done")
+        #         cleaned_content = scraper.clean_body_content(body_content)
+        #         chunks = scraper.split_content(cleaned_content)
                 
-                summary = gemini_text_processor.summarize_text(chunks)
-                print("summary generated....")
-                # Extract title and process text
-                title = gemini_text_processor.get_title(summary)
-                print("title done")
-                # extract tags from suummary
-                tags = gemini_text_processor.generate_tags(summary)
-                print("tags done")
-                embedding = embedder_for_title.embed_text(title)
-                print("embedding done")
+        #         summary = gemini_text_processor.summarize_text(chunks)
+        #         print("summary generated....")
+        #         # Extract title and process text
+        #         title = gemini_text_processor.get_title(summary)
+        #         print("title done")
+        #         # extract tags from suummary
+        #         tags = gemini_text_processor.generate_tags(summary)
+        #         print("tags done")
+        #         embedding = embedder_for_title.embed_text(title)
+        #         print("embedding done")
                 
-            else:
-                title="Untitled"
-                summary="No Summary Found"
-                tags=[]
-                embedding=[]
-                source_url=""
+        #     else:
+        #         title="Untitled"
+        #         summary="No Summary Found"
+        #         tags=[]
+        #         embedding=[]
+        #         source_url=""
 
-            # insert the data 
-            return knowledge_card_dao.insert_knowledge_card(
-                user_id=user_id,
-                title=title,
-                summary=summary,
-                tags=tags,
-                note=note,
-                embedding=embedding,
-                source_url=source_url,
-                thumbnail=thumbnail,
-                favourite= False,
-                archive= False
-            )
-        
+        #     # insert the data 
+        #     result =  knowledge_card_dao.insert_knowledge_card(
+        #         user_id=user_id,
+        #         title=title,
+        #         summary=summary,
+        #         tags=tags,
+        #         note=note,
+        #         embedding=embedding,
+        #         source_url=source_url,
+        #         thumbnail=thumbnail,
+        #         favourite= False,
+        #         archive= False
+        #     )
+
+            clustering = ClusteringServices.cluster_knowledge_cards(user_id)
+            print("proceeding for clustering")
+            return "doneeeeeeee"
+
         except Exception as exception:
             print(f"Error processing knowledge card: {exception}")
             return None
