@@ -99,3 +99,29 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to update the knowledge card."
+        
+    def get_cards_by_user(self, user_id: str ):
+        """
+        Usage: Get all knowledge cards for a user
+        Parameter: user_id: The user ID to get cards for
+        Returns: List of knowledge cards
+        """
+        try:
+            user_id = ObjectId(user_id)
+            return list(self.knowledge_cards_collection.find({"user_id": user_id}))
+        except Exception as exception:
+            print(f"Error getting cards: {exception}")
+            return []
+        
+    def get_card_by_id(self, card_id: str):
+        """
+        Usage: Get a knowledge card by ID
+        Parameter: card_id: The card ID to get           
+        Returns: Knowledge card document or None
+        """
+        try:
+            card_id = ObjectId(card_id)
+            return self.knowledge_cards_collection.find_one({"_id": card_id})
+        except Exception as e:
+            print(f"Error getting card: {e}")
+            return None

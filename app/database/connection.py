@@ -12,6 +12,7 @@ class Database:
         self.db = self.client["brieffydb"]
         self.users_collection = self.db["users_collection"]
         self.knowledge_cards_collection = self.db["knowledge_cards_collection"]
+        self.clusters_collection = self.db["clusters_collection"]
 
     def get_collection(self, collection_name):
         """
