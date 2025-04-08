@@ -15,6 +15,7 @@ class KnowledgeCard(BaseModel):
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
+    category: Optional[str] = "other"  # Default to "other" if not provided
 
 class KnowledgeCardRequest(BaseModel):
     token: str

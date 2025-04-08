@@ -1,7 +1,9 @@
-from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text
+from fastapi.responses import StreamingResponse
+from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator
 from models import knowledge_card_model, KnowledgeCardRequest
 from dao import knowledge_card_dao
 from services.card_cluster_service import ClusteringServices
+import io
 
 class KnowledgeCardService:
 
@@ -16,23 +18,8 @@ class KnowledgeCardService:
             user_id = decoded_token["userId"]
 
             all_cards = knowledge_card_dao.get_all_cards(user_id)
-            card_details = []
-            for card in all_cards:
-                card_details.append({
-                    "card_id": card.card_id,
-                    "user_id":card.user_id,
-                    "title": card.title,
-                    "summary": card.summary,
-                    "note": card.note,
-                    "tags":card.tags,
-                    "created_at":card.created_at,
-                    "embedded_vector":card.embedded_vector,
-                    "source_url": card.source_url,
-                    "thumbnail": card.thumbnail,
-                    "favourite": card.favourite,
-                    "archive": card.archive
-                })   
-            return card_details
+              
+            return [card.dict() for card in all_cards] if all_cards else [] # Convert each card to a dictionary
 
         except Exception as exception:
             print(f"Error getting knowledge cards: {exception}")
@@ -143,3 +130,61 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error editing the card: {exception}")
             return None
+        
+    def generate_card_document(self, card_id: str, file_format: str = "pdf"):
+        """
+        generate a downloadable document from a knowledge card
+        """
+        card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+        
+        if not card:
+            raise FileNotFoundError("Card not found")
+        
+        # # Check if user has access to this card
+        # if card.get("user_id") != user_id:
+        #     raise PermissionError("User doesn't have access to this card")
+
+        if file_format.lower() == "pdf":
+            return self._generate_pdf_response(card_data=card)
+        elif file_format.lower() == "docx":
+            return self._generate_docx_response(card_data=card)
+        else:
+            raise ValueError(f"Unsupported format: {file_format}")
+        
+    def _generate_pdf_response(self, card_data):
+
+        pdf_generator = pdf_docx_generator.generate_card_pdf(card_data=card_data)
+
+        return StreamingResponse(
+            io.BytesIO(pdf_generator),
+            media_type="application/pdf",
+            headers={
+                "Content-Dispositon": f"attachment; filename=card_{card_data['_id']}.pdf0"
+            }
+        )
+
+    def _generate_docx_response(self, card_data):
+
+        docx_generator = pdf_docx_generator.generate_card_docx(card_data=card_data)
+
+        return StreamingResponse(
+            io.BytesIO(docx_generator),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename=card_{card_data['_id']}.docx"
+            }
+        )
+
+    def toggle_favourite(self, card_id:str):
+        """
+        Usage: Add or remove a card from favourites.
+        Parameters: card_id (str): The ID of the card to be toggled.
+        Returns: str: A message indicating the result of the operation.
+        """
+        try:
+            result = knowledge_card_dao.toggle_favourite(card_id=card_id)
+            return result
+
+        except Exception as exception:
+            print(f"Error toggling favourite: {exception}")
+            return "Failed to toggle favourite status."
