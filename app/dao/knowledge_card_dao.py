@@ -2,6 +2,7 @@ from bson import ObjectId
 from datetime import datetime
 from database import db_instance
 from models import KnowledgeCard
+from utils import to_knowledge_card
 
 class KnowledgeCardDao:
     def __init__(self):
@@ -20,20 +21,7 @@ class KnowledgeCardDao:
             cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)})
             
             return [
-                KnowledgeCard(
-                    card_id=str(card["_id"]),
-                    user_id=str(card["user_id"]),
-                    title=card.get("title", ""),
-                    summary=card.get("summary", ""),
-                    tags=card.get("tags", []),
-                    note=card.get("note", ""),
-                    created_at=card.get("created_at", ""),
-                    embedded_vector=card.get("embedded_vector", []),
-                    source_url=card.get("source_url", ""),
-                    thumbnail=card.get("thumbnail",""),
-                    favourite=card.get("favourite", False),
-                    archive=card.get("archive",False)
-                )
+                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
                 for card in cards
             ]
         
@@ -125,3 +113,31 @@ class KnowledgeCardDao:
         except Exception as e:
             print(f"Error getting card: {e}")
             return None
+        
+    def toggle_favourite(self, card_id: str):
+        """
+        Usage: Toggle the favourite status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+            user_id (str): The ID of the user who owns the card.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the favourite status
+            new_favourite_status = not card.get("favourite", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"favourite": new_favourite_status}}
+            )
+            return "Favourite status updated successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to toggle favourite status."
