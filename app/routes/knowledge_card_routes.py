@@ -18,7 +18,7 @@ async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
 
     if not card_data:
         raise HTTPException(status_code=400, detail="Failed to process knowledge card")
-    return JSONResponse({ "message": "Knowledge card '{card_data}' added successfully" })
+    return JSONResponse({ "message": f"Knowledge card {card_data} added successfully" })
 
 @knowledge_card_router.put("/")
 async def edit_knowledge_card(details: EditKnowledgeCard):
