@@ -18,3 +18,4 @@ mistralai
 google-generativeai
 numpy
 scikit-learn
+youtube-transcript-api
