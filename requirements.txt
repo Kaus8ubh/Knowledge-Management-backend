@@ -21,3 +21,4 @@ scikit-learn
 youtube-transcript-api
 python-docx==0.8.11
 fpdf==1.7.2
+markdown

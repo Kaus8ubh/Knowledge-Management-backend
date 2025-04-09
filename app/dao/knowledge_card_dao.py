@@ -29,8 +29,7 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
         
-    def insert_knowledge_card(self, user_id: str, title: str, summary: str, tags: list, note: str, embedding: list,
-                              source_url: str, thumbnail: str, favourite: bool, archive: bool):
+    def insert_knowledge_card(self,card: KnowledgeCard):
         """
         Usage:Insert a knowledge card into MongoDB"
         Parameters:
@@ -45,22 +44,12 @@ class KnowledgeCardDao:
             str: The ID of the inserted knowledge card
         """
         try:
-            knowledge_card = {
-                "user_id": ObjectId(user_id),
-                "title": title,
-                "summary": summary,
-                "tags": tags,
-                "note": note,
-                "created_at": datetime.utcnow().isoformat(),
-                "embedded_vector": embedding,
-                "source_url": source_url,
-                "thumbnail": thumbnail,
-                "favourite": favourite,
-                "archive": archive
-            }
-            self.knowledge_cards_collection.insert_one(knowledge_card)
-            return title
+            knowledge_card = card.dict()
+            knowledge_card["user_id"]=ObjectId(card.user_id)
+            # knowledge_card["created_at"]=datetime.utcnow.isoformat()
 
+            result = self.knowledge_cards_collection.insert_one(knowledge_card)
+            return str(result.inserted_id)
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
@@ -141,3 +130,23 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to toggle favourite status."
+        
+    def delete_card(self, card_id: str):
+        """
+        Usage: Delete a knowledge card by ID.
+        Parameters:
+            card_id (str): The ID of the card to be deleted.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            result = self.knowledge_cards_collection.delete_one({"_id": card_id})
+            if result.deleted_count > 0:
+                return "Knowledge card deleted successfully."
+            else:
+                return "Card not found."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to delete the knowledge card."
