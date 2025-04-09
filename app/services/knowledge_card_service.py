@@ -1,8 +1,10 @@
+from bson import ObjectId
 from fastapi.responses import StreamingResponse
-from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator
-from models import knowledge_card_model, KnowledgeCardRequest
-from dao import knowledge_card_dao
+from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html
+from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
+from dao import knowledge_card_dao, card_cluster_dao
 from services.card_cluster_service import ClusteringServices
+from datetime import datetime
 import io
 
 class KnowledgeCardService:
@@ -19,10 +21,46 @@ class KnowledgeCardService:
 
             all_cards = knowledge_card_dao.get_all_cards(user_id)
               
-            return [card.dict() for card in all_cards] if all_cards else [] # Convert each card to a dictionary
+            return [card.dict() for card in all_cards] if all_cards else []
 
         except Exception as exception:
             print(f"Error getting knowledge cards: {exception}")
+            return None
+        
+    def get_favourite_cards(self, token:str):
+        """
+        Usage: Retrieve favourite knowledge cards for a specific user.
+        Parameters: token (str): The access token of the user whose cards are to be retrieved.
+        Returns: list: A list of favourite knowledge cards.
+        """
+        try:
+            decoded_token = decode_access_token(token)
+            user_id = decoded_token["userId"]
+
+            cards = knowledge_card_dao.get_all_cards(user_id)
+              
+            return [card.dict() for card in cards if card.favourite is True] if cards else []
+
+        except Exception as exception:
+            print(f"Error getting favourite knowledge cards: {exception}")
+            return None
+        
+    def get_archive_cards(self, token:str):
+        """
+        Usage: Retrieve archive knowledge cards for a specific user.
+        Parameters: token (str): The access token of the user whose cards are to be retrieved.
+        Returns: list: A list of archive knowledge cards.
+        """
+        try:
+            decoded_token = decode_access_token(token)
+            user_id = decoded_token["userId"]
+
+            cards = knowledge_card_dao.get_all_cards(user_id)
+              
+            return [card.dict() for card in cards if card.archive is True] if cards else []
+
+        except Exception as exception:
+            print(f"Error getting archive knowledge cards: {exception}")
             return None
         
     def process_knowledge_card(self, knowledge_card_data: KnowledgeCardRequest):
@@ -79,22 +117,28 @@ class KnowledgeCardService:
                 embedding=[]
                 source_url=""
 
+            markup_summary = convert_summary_to_html(summary_text=summary)
+            created_at=datetime.utcnow().isoformat()
+            
             # insert the data 
-            result =  knowledge_card_dao.insert_knowledge_card(
-                user_id=user_id,
-                title=title,
-                summary=summary,
-                tags=tags,
-                note=note,
-                embedding=embedding,
-                source_url=source_url,
-                thumbnail=thumbnail,
-                favourite= False,
-                archive= False
-            )
+            card = KnowledgeCard(user_id=user_id,
+                                 title=title,
+                                 summary=markup_summary,
+                                 tags=tags,
+                                 note=note,
+                                 created_at=created_at,
+                                 embedded_vector=embedding,
+                                 source_url=source_url,
+                                 thumbnail=thumbnail,
+                                 favourite=False,
+                                 archive=False,
+                                 category=None)
+            
+            result = knowledge_card_dao.insert_knowledge_card(card=card)
 
             clustering = ClusteringServices.cluster_knowledge_cards(user_id)
             print("proceeding for clustering")
+            
             return result
 
         except Exception as exception:
@@ -188,3 +232,18 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error toggling favourite: {exception}")
             return "Failed to toggle favourite status."
+
+    def delete_card(self, card_id:str, user_id: str):
+        """
+        Usage: Delete a knowledge card.
+        Parameters: card_id (str): The ID of the card to be deleted.
+        Returns: str: A message indicating the result of the operation.
+        """
+        try:
+            result = knowledge_card_dao.delete_card(card_id=card_id)
+            updated_clusters = card_cluster_dao.delete_card_from_cluster(card_id=card_id, user_id=user_id)
+            return result
+
+        except Exception as exception:
+            print(f"Error deleting card: {exception}")
+            return "Failed to delete the card."

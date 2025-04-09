@@ -63,3 +63,21 @@ class ClusterDao:
         except Exception as exception:
             print(f"error getting clusters: {exception}")
             return []
+        
+    def delete_card_from_cluster(self, card_id: str, user_id: str):
+        """
+        Usage: delete a card from a cluster
+        Parameter: card_id: The card ID to delete from the cluster
+        Returns: success/failure message
+        """
+        try:
+            user_obj_id = ObjectId(user_id)
+            card_obj_id = ObjectId(card_id)
+            result = self.clusters_collection.update_many(
+                {"user_id": user_obj_id},
+                {"$pull": {"knowledge_card_ids": card_obj_id}}
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"error deleting card from cluster: {exception}")
+            return False

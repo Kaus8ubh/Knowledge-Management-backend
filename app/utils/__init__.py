@@ -11,6 +11,7 @@ from .youtube_url_checker import is_youtube_url
 from .get_yt_transcript import get_video_id, get_yt_transcript_text
 from .document_generator import DocumentGenerator
 from .knowledge_card_helper import to_knowledge_card
+from .mardown_converter import convert_summary_to_html
 
 scraper = Scraper()
 embedder_for_title = Embedder()
@@ -19,4 +20,4 @@ pdf_docx_generator = DocumentGenerator()
 
 __all__ = ["create_access_token", "decode_access_token", "DatabaseError", "NotFoundError", "scraper","embedder_for_title","gemini_text_processor","get_thumbnail",
            "cosine_distance_matrix", "generate_topic_name", "clustering_module", "is_youtube_url", "get_yt_transcript_text", "get_video_id", "pdf_docx_generator",
-           "to_knowledge_card"]
+           "to_knowledge_card", "convert_summary_to_html"]

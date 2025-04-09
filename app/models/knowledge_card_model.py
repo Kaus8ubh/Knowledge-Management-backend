@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class KnowledgeCard(BaseModel):
-    card_id: str
+    card_id: Optional[str]=None
     user_id: str
     title: Optional[str]
     summary: Optional[str]
@@ -15,7 +15,7 @@ class KnowledgeCard(BaseModel):
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
-    category: Optional[str] = "other"  # Default to "other" if not provided
+    category: Optional[str] 
 
 class KnowledgeCardRequest(BaseModel):
     token: str
