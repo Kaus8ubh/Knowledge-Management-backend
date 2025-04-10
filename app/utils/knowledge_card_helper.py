@@ -15,5 +15,5 @@ def to_knowledge_card(card) -> KnowledgeCard:
         thumbnail=card.get("thumbnail"),
         favourite=card.get("favourite"),
         archive=card.get("archive"),
-        category=card.get("category", "other")
+        category=card.get("category", "Misc")
     )

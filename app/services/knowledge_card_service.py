@@ -21,7 +21,7 @@ class KnowledgeCardService:
 
             all_cards = knowledge_card_dao.get_all_cards(user_id)
               
-            return [card.dict() for card in all_cards] if all_cards else []
+            return [card.dict() for card in all_cards if card.archive is False] if all_cards else []
 
         except Exception as exception:
             print(f"Error getting knowledge cards: {exception}")
@@ -77,8 +77,10 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(knowledge_card_data.token)
             
             user_id = decoded_token["userId"]
-            note = knowledge_card_data.note
-            thumbnail = get_thumbnail()
+            if (knowledge_card_data.note == ""):
+                note = "No Note Yet"
+            else:
+                note = knowledge_card_data.note
             source_url = knowledge_card_data.source_url
 
             if source_url:
@@ -107,6 +109,8 @@ class KnowledgeCardService:
                 # extract tags from suummary
                 tags = gemini_text_processor.generate_tags(summary)
                 print("tags done")
+                category = gemini_text_processor.generate_category(summary)
+                print("category done: " + category)
                 embedding = embedder_for_title.embed_text(title)
                 print("embedding done")
                 
@@ -116,7 +120,9 @@ class KnowledgeCardService:
                 tags=[]
                 embedding=[]
                 source_url=""
+                category="Misc"
 
+            thumbnail = get_thumbnail(category=category)
             markup_summary = convert_summary_to_html(summary_text=summary)
             created_at=datetime.utcnow().isoformat()
             
@@ -132,7 +138,7 @@ class KnowledgeCardService:
                                  thumbnail=thumbnail,
                                  favourite=False,
                                  archive=False,
-                                 category=None)
+                                 category=category)
             
             result = knowledge_card_dao.insert_knowledge_card(card=card)
 
@@ -232,6 +238,20 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error toggling favourite: {exception}")
             return "Failed to toggle favourite status."
+        
+    def toggle_archive(self, card_id:str):
+        """
+        Usage: Add or remove a card from archives.
+        Parameters: card_id (str): The ID of the card to be toggled.
+        Returns: str: A message indicating the result of the operation.
+        """
+        try:
+            result = knowledge_card_dao.toggle_archive(card_id=card_id)
+            return result
+
+        except Exception as exception:
+            print(f"Error toggling archive: {exception}")
+            return "Failed to toggle archive status."
 
     def delete_card(self, card_id:str, user_id: str):
         """

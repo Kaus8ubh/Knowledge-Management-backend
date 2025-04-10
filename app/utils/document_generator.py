@@ -1,9 +1,17 @@
 from datetime import datetime
 from fpdf import FPDF
 from docx import Document
+from docx.shared import Pt
+from bs4 import BeautifulSoup  
 import io
 
 class DocumentGenerator:
+
+    def _convert_html_to_text(self, html_content):
+        """Convert HTML content into formatted text for FPDF and python-docx."""
+        # Use BeautifulSoup to parse and clean HTML content
+        soup = BeautifulSoup(html_content, "html.parser")
+        return soup
 
     def generate_card_pdf(self,card_data):
         """generate pdf document from card data"""
@@ -35,14 +43,18 @@ class DocumentGenerator:
             pdf.set_font("Arial", "B", 12)
             pdf.cell(0, 10, "Note:", ln=True)
             pdf.set_font("Arial", "", 12)
-            pdf.multi_cell(0, 10, card_data["note"])
-           
+            note_html = card_data["note"]
+            note_content = self._convert_html_to_text(note_html)
+            pdf.multi_cell(0, 10, note_content.text)    
+
         # summary
         if "summary" in card_data:
             pdf.set_font("Arial", "B", 12)
             pdf.cell(0, 10, "Summary:", ln=True)
             pdf.set_font("Arial", "", 12)
-            pdf.multi_cell(0, 10, card_data["summary"])
+            summary_html = card_data["summary"]
+            summary_content = self._convert_html_to_text(summary_html)
+            pdf.multi_cell(0, 10, summary_content.text)
 
         # source URL
         if "source_url" in card_data:
@@ -80,13 +92,17 @@ class DocumentGenerator:
         # user notes
         if "note" in card_data:
             doc.add_heading("Note:", level=1)
-            doc.add_paragraph(card_data["note"])
-        
+            note_html = card_data["note"]
+            note_content = self._convert_html_to_text(note_html)
+            doc.add_paragraph(note_content.text)   
+
         # summary
         if "summary" in card_data:
             doc.add_heading("Summary:", level=1)
-            doc.add_paragraph(card_data["summary"])
-        
+            summary_html = card_data["summary"]
+            summary_content = self._convert_html_to_text(summary_html)
+            doc.add_paragraph(summary_content.text)
+                    
         # source URL
         if "source_url" in card_data:
             p = doc.add_paragraph("Source: ")
