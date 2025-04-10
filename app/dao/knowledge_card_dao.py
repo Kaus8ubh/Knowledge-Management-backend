@@ -108,7 +108,6 @@ class KnowledgeCardDao:
         Usage: Toggle the favourite status of a knowledge card.
         Parameters:
             card_id (str): The ID of the card to be toggled.
-            user_id (str): The ID of the user who owns the card.
         Returns:
             str: A message indicating the result of the operation.
         """
@@ -130,6 +129,33 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to toggle favourite status."
+        
+    def toggle_archive(self, card_id: str):
+        """
+        Usage: Toggle the favourite status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the favourite status
+            new_archive_status = not card.get("archive", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"archive": new_archive_status}}
+            )
+            return "Card moved to archives successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to move to archives."
         
     def delete_card(self, card_id: str):
         """
