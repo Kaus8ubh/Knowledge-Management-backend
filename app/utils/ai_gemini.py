@@ -75,17 +75,32 @@ class TextProcessingWithGemini:
 
                 # Generate a refined summary in a structured format
                 response = client.generate_content(f"""
-                    Consider the given collection of documents as a single document. 
-                    A researcher needs a structured overview of this document. 
-                    Generate a well-organized summary with clear sections of the following: \n\n
-                    {combined_summary}
-                    \n\n**Expected format:**
-                    - Introduction: A brief about the content.
-                    - Key Highlights: Use bullet points to list core ideas, facts, or methods.
-                    - Conclusion: A short closing remark, if necessary.
-                    Don't use decoratives in the summary.
-                    Only include the main content of the topic; avoid promotional text.
-                """)
+                        You are provided with a collection of documents that together form a single comprehensive document. 
+                        A researcher needs a summary that is rich and self-contained, so they can understand the full scope without reading the original sources.
+
+                        Your task is to generate a structured summary with expanded, informative sections:
+
+                        **Format:**
+                        - **Introduction**: Provide a clear and concise overview of what the document is about, its objective, and its context.
+                        
+                        - **Key Highlights**:
+                            • List each core idea, concept, method, or insight in separate bullet points.
+                            • For each point, include 2–4 sentences explaining the idea in enough detail so that the reader can grasp the full meaning without needing to refer to the original article.
+                            • If any processes, steps, methods, or frameworks are described in the content, explain them clearly and thoroughly.
+                            • Use examples or brief elaborations when they help clarify the point.
+
+                        - **Conclusion**: Summarize the key takeaway, implications, or suggested next steps, if applicable.
+
+                        **Guidelines:**
+                        - Avoid promotional or decorative language.
+                        - Maintain an informative and research-friendly tone.
+                        - Ensure the summary is useful and comprehensive enough to stand on its own.
+        
+                        Summarize the following document:
+
+                        {combined_summary}
+                    """)
+
 
                 final_summary = self.extract_text_from_response(response)
 
@@ -126,4 +141,48 @@ class TextProcessingWithGemini:
             return re.sub(r"^\**Title:\**\s*", "", title).strip("*")
         except Exception as exception:
             print(f"Error generating title: {exception}")
+            return None
+
+    def generate_category(self, content):
+        """
+        Usage: Generate a single category based on the provided content, ensuring
+            the category is one of the predefined categories or "Uncategorized".
+        Parameters:
+            content (str): The content for which category is to be generated.
+        Returns:
+            str: A category type (e.g., Tech, Social, Science, etc.) or "Uncategorized".
+        """
+        try:
+            # List of predefined categories
+            predefined_categories = [
+                "Tech", "Science", "Health", "Business", "Politics", 
+                "Entertainment", "Sports", "Education", "Travel", "Food", 
+                "Lifestyle", "Fashion", "Music", "Movies", "Gaming", 
+                "News", "Environment", "Social Media", "Finance", "Art"
+            ]
+
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            # Request category generation
+            response = client.generate_content(f"""
+                    Categorize the following content into one of these predefined categories:
+                    Technology, Science, Health, Business, Politics, Entertainment, Sports,
+                    Education, Travel, Food, Lifestyle, Fashion, Music, Movies, Gaming,
+                    News, Environment, Social Media, Finance, Art.
+                    {content}
+                    ### Category Guidelines:
+                    1. Choose only one category from the predefined list.
+                    2. Provide the most relevant category that best describes the content.
+                    3. Return the category as a single word (e.g., Tech, News, Science).
+                    """)
+
+            category = self.extract_text_from_response(response).strip()
+
+            # If the generated category is not in predefined categories, set it as "Misc"
+            if category not in predefined_categories:
+                category = "Misc"
+
+            return category
+        except Exception as exception:
+            print(f"Error generating category: {exception}")
             return None

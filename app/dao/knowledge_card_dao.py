@@ -2,6 +2,7 @@ from bson import ObjectId
 from datetime import datetime
 from database import db_instance
 from models import KnowledgeCard
+from utils import to_knowledge_card
 
 class KnowledgeCardDao:
     def __init__(self):
@@ -20,20 +21,7 @@ class KnowledgeCardDao:
             cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)})
             
             return [
-                KnowledgeCard(
-                    card_id=str(card["_id"]),
-                    user_id=str(card["user_id"]),
-                    title=card.get("title", ""),
-                    summary=card.get("summary", ""),
-                    tags=card.get("tags", []),
-                    note=card.get("note", ""),
-                    created_at=card.get("created_at", ""),
-                    embedded_vector=card.get("embedded_vector", []),
-                    source_url=card.get("source_url", ""),
-                    thumbnail=card.get("thumbnail",""),
-                    favourite=card.get("favourite", False),
-                    archive=card.get("archive",False)
-                )
+                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
                 for card in cards
             ]
         
@@ -41,8 +29,7 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
         
-    def insert_knowledge_card(self, user_id: str, title: str, summary: str, tags: list, note: str, embedding: list,
-                              source_url: str, thumbnail: str, favourite: bool, archive: bool):
+    def insert_knowledge_card(self,card: KnowledgeCard):
         """
         Usage:Insert a knowledge card into MongoDB"
         Parameters:
@@ -57,22 +44,12 @@ class KnowledgeCardDao:
             str: The ID of the inserted knowledge card
         """
         try:
-            knowledge_card = {
-                "user_id": ObjectId(user_id),
-                "title": title,
-                "summary": summary,
-                "tags": tags,
-                "note": note,
-                "created_at": datetime.utcnow().isoformat(),
-                "embedded_vector": embedding,
-                "source_url": source_url,
-                "thumbnail": thumbnail,
-                "favourite": favourite,
-                "archive": archive
-            }
-            self.knowledge_cards_collection.insert_one(knowledge_card)
-            return title
+            knowledge_card = card.dict()
+            knowledge_card["user_id"]=ObjectId(card.user_id)
+            # knowledge_card["created_at"]=datetime.utcnow.isoformat()
 
+            result = self.knowledge_cards_collection.insert_one(knowledge_card)
+            return str(result.inserted_id)
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
@@ -99,3 +76,103 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to update the knowledge card."
+        
+    def get_cards_by_user(self, user_id: str ):
+        """
+        Usage: Get all knowledge cards for a user
+        Parameter: user_id: The user ID to get cards for
+        Returns: List of knowledge cards
+        """
+        try:
+            user_id = ObjectId(user_id)
+            return list(self.knowledge_cards_collection.find({"user_id": user_id}))
+        except Exception as exception:
+            print(f"Error getting cards: {exception}")
+            return []
+        
+    def get_card_by_id(self, card_id: str):
+        """
+        Usage: Get a knowledge card by ID
+        Parameter: card_id: The card ID to get           
+        Returns: Knowledge card document or None
+        """
+        try:
+            card_id = ObjectId(card_id)
+            return self.knowledge_cards_collection.find_one({"_id": card_id})
+        except Exception as e:
+            print(f"Error getting card: {e}")
+            return None
+        
+    def toggle_favourite(self, card_id: str):
+        """
+        Usage: Toggle the favourite status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the favourite status
+            new_favourite_status = not card.get("favourite", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"favourite": new_favourite_status}}
+            )
+            return "Favourite status updated successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to toggle favourite status."
+        
+    def toggle_archive(self, card_id: str):
+        """
+        Usage: Toggle the favourite status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the favourite status
+            new_archive_status = not card.get("archive", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"archive": new_archive_status}}
+            )
+            return "Card moved to archives successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to move to archives."
+        
+    def delete_card(self, card_id: str):
+        """
+        Usage: Delete a knowledge card by ID.
+        Parameters:
+            card_id (str): The ID of the card to be deleted.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            result = self.knowledge_cards_collection.delete_one({"_id": card_id})
+            if result.deleted_count > 0:
+                return "Knowledge card deleted successfully."
+            else:
+                return "Card not found."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to delete the knowledge card."
