@@ -14,3 +14,4 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
     AUTH = os.getenv("AUTH")
+    BaseURL = os.getenv("BaseURL")

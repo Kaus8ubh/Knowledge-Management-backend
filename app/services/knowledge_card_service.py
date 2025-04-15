@@ -6,6 +6,8 @@ from dao import knowledge_card_dao, card_cluster_dao
 from services.card_cluster_service import ClusteringServices
 from datetime import datetime
 import io
+import secrets
+from config import Config
 
 class KnowledgeCardService:
 
@@ -252,6 +254,20 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error toggling archive: {exception}")
             return "Failed to toggle archive status."
+        
+    def toggle_public(self, card_id:str):
+        """
+        Usage: Add or remove a card from public view.
+        Parameters: card_id (str): The ID of the card to be toggled.
+        Returns: str: A message indicating the result of the operation.
+        """
+        try:
+            result = knowledge_card_dao.toggle_public(card_id=card_id)
+            return result
+
+        except Exception as exception:
+            print(f"Error while going public: {exception}")
+            return "Failed to toggle public status."
 
     def delete_card(self, card_id:str, user_id: str):
         """
@@ -267,3 +283,22 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error deleting card: {exception}")
             return "Failed to delete the card."
+        
+    def generate_share_link(self, card_id:str, user_id:str):
+        
+        card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+        token = card.get("shared_token")
+        if not token:
+            token = secrets.token_urlsafe(16)
+            knowledge_card_dao.update_card_shared_token(card_id=card_id, token=token)
+
+        share_url = f"http://{Config.BaseURL}/knowledge-card/shared/{token}"
+        return share_url
+    
+    def get_shared_card(self, token: str):
+        card = knowledge_card_dao.get_card_by_token(token=token)
+
+        if not card:
+            raise FileNotFoundError("card not found")
+        
+        return  card

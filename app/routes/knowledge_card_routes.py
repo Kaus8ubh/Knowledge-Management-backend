@@ -68,6 +68,15 @@ async def add_remove_favourite(card_id:str):
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
+@knowledge_card_router.put("/{card_id}/public")
+async def add_remove_public(card_id:str):
+    """API endpoint to add or remove a card from public"""
+    try:
+        result = knowledge_card_service.toggle_public(card_id=card_id)
+        return JSONResponse({"message": result})
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
 @knowledge_card_router.delete("/{card_id}/delete")
 async def delete_card(card_id:str, user_id: str):
     """API endpoint to delete a card"""
@@ -76,3 +85,17 @@ async def delete_card(card_id:str, user_id: str):
         return JSONResponse({"message": result})
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.post("/{card_id}/generate-share-link")
+async def generate_share_link(card_id: str, user_id: str):
+    try:
+        return {"share_url": knowledge_card_service.generate_share_link(card_id=card_id, user_id=user_id)}
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/shared/{token}")
+async def view_shared_card(token: str):
+    try:
+        return knowledge_card_service.get_shared_card(token=token)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail= str(exception))
