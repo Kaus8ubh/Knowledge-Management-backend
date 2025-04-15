@@ -22,6 +22,12 @@ async def get_archive_card(token: str):
     """API endpoint to get archive cards of the user"""
     archive_cards = knowledge_card_service.get_archive_cards(token)
     return archive_cards
+
+@knowledge_card_router.get("/public")
+async def get_public_card():
+    """API endpoint to get all public cards"""
+    public_cards = knowledge_card_service.get_public_cards()
+    return public_cards
     
 @knowledge_card_router.post("/")
 async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
