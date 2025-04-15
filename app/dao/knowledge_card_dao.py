@@ -29,6 +29,22 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
         
+    def get_all_public_cards(self):
+        """
+        Usage: Retrieve all public knowledge cards.
+        Returns: list: A list of public knowledge cards.
+        """
+        try:
+            cards = self.knowledge_cards_collection.find({"public": True})
+            return [
+                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
+                for card in cards
+            ]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    
     def insert_knowledge_card(self,card: KnowledgeCard):
         """
         Usage:Insert a knowledge card into MongoDB"
