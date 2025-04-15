@@ -7,6 +7,7 @@ from services.card_cluster_service import ClusteringServices
 from datetime import datetime
 import io
 import secrets
+from config import Config
 
 class KnowledgeCardService:
 
@@ -291,7 +292,7 @@ class KnowledgeCardService:
             token = secrets.token_urlsafe(16)
             knowledge_card_dao.update_card_shared_token(card_id=card_id, token=token)
 
-        share_url = f"http://localhost:8000/knowledge-card/shared/{token}"
+        share_url = f"http://{Config.BaseURL}/knowledge-card/shared/{token}"
         return share_url
     
     def get_shared_card(self, token: str):
