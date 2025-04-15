@@ -145,7 +145,7 @@ class KnowledgeCardDao:
             if not card:
                 return "Card not found."
 
-            # Toggle the favourite status
+            # Toggle the archive status
             new_archive_status = not card.get("archive", False)
             self.knowledge_cards_collection.update_one(
                 {"_id": card_id},
@@ -157,6 +157,33 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return "Failed to move to archives."
         
+    def toggle_public(self, card_id: str):
+        """
+        Usage: Toggle the public status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the public status
+            new_public_status = not card.get("public", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"public": new_public_status}}
+            )
+            return "Card moved to global successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to move to global."
+    
     def delete_card(self, card_id: str):
         """
         Usage: Delete a knowledge card by ID.
@@ -176,3 +203,23 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to delete the knowledge card."
+        
+    def update_card_shared_token(self, card_id: str, token: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "shared_token": token
+                    }
+                }
+            )
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to generate shareable LINK"
+    
+    def get_card_by_token(self, token: str):
+        try:
+            card = self.knowledge_cards_collection.find_one({"shared_token": token})
+            return to_knowledge_card(card=card)
+        except Exception as exception:
+            print(f"erron finding token for sharing: {exception}")
