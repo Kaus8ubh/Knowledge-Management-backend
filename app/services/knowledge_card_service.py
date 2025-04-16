@@ -11,7 +11,7 @@ from config import Config
 
 class KnowledgeCardService:
 
-    def get_all_cards(self, token:str):
+    def get_all_cards(self, token: str):
         """
         Usage: Retrieve all knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -22,13 +22,20 @@ class KnowledgeCardService:
             user_id = decoded_token["userId"]
 
             all_cards = knowledge_card_dao.get_all_cards(user_id)
-              
-            return [card.dict() for card in all_cards if card.archive is False] if all_cards else []
+
+            result = []
+            for card in all_cards:
+                if card.archive is False:
+                    card_dist = card.dict()
+                    card_dist["liked_by_me"] = user_id in (card_dist.get("liked_by") or [])
+                    result.append(card_dist)
+            
+            return result  
 
         except Exception as exception:
             print(f"Error getting knowledge cards: {exception}")
-            return None
-        
+            return []
+            
     def get_favourite_cards(self, token:str):
         """
         Usage: Retrieve favourite knowledge cards for a specific user.
@@ -77,14 +84,14 @@ class KnowledgeCardService:
             result = []
             for card in cards:
                 card_dist = card.dict()
-                card_dist["liked_by_me"] = user_id in card_dist.get("liked_by",[])
+                card_dist["liked_by_me"] = user_id in (card_dist.get("liked_by") or [])
                 result.append(card_dist)
             
             return result
 
         except Exception as exception:
             print(f"Error getting public knowledge cards: {exception}")
-            return None
+            return []
         
     def process_knowledge_card(self, knowledge_card_data: KnowledgeCardRequest):
         """
@@ -165,8 +172,8 @@ class KnowledgeCardService:
             
             result = knowledge_card_dao.insert_knowledge_card(card=card)
 
-            clustering = ClusteringServices.cluster_knowledge_cards(user_id)
-            print("proceeding for clustering")
+            # clustering = ClusteringServices.cluster_knowledge_cards(user_id)
+            # print("proceeding for clustering")
             
             return result
 
@@ -196,7 +203,7 @@ class KnowledgeCardService:
             if not updates:
                 return "no changes updated"
 
-            result = knowledge_card_dao.update_card_details(card_id=card_id,user_id=user_id,updates=updates)
+            result = knowledge_card_dao.update_card_details(card_id=card_id ,updates=updates)
 
             return result
 
@@ -283,6 +290,12 @@ class KnowledgeCardService:
         Returns: str: A message indicating the result of the operation.
         """
         try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            if not card:
+                return "Card not found."
+            if card.get("copied_from"):
+                return "You cannot make a copied card public."
+            
             result = knowledge_card_dao.toggle_public(card_id=card_id)
             return result
 
@@ -297,8 +310,19 @@ class KnowledgeCardService:
         Returns: str: A message indicating the result of the operation.
         """
         try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            if not card:
+                return "Card not found."
+            
+            copied_from = card.get("copied_from")
+            if copied_from:
+                knowledge_card_dao.remove_user_from_copied_by(
+                    original_card_id=copied_from,
+                    user_id=user_id
+                )
+            
             result = knowledge_card_dao.delete_card(card_id=card_id)
-            updated_clusters = card_cluster_dao.delete_card_from_cluster(card_id=card_id, user_id=user_id)
+            # updated_clusters = card_cluster_dao.delete_card_from_cluster(card_id=card_id, user_id=user_id)
             return result
 
         except Exception as exception:
@@ -334,20 +358,83 @@ class KnowledgeCardService:
             if user_id in card.get("liked_by", []):
                 new_likes = card.get("likes", 1) - 1
                 liked_by = card.get("liked_by", [])
-                updated_liked_by.remove(user_id)
-                return knowledge_card_dao.unlike_a_card(
-                    card_id=card_id,likes=new_likes,liked_by=updated_liked_by
+                liked_by.remove(user_id)
+                updated_liked_by = liked_by
+                result = knowledge_card_dao.unlike_a_card(
+                    card_id=card_id,
+                    likes=new_likes,
+                    liked_by=updated_liked_by
                 )
-
+                if result:
+                    return {"message": "Card unliked successfully"}
+                else:
+                    return {"message": "Failed to unlike the card"}
+                
             new_likes = card.get("likes", 0) + 1
             updated_liked_by = card.get("liked_by", [])
             updated_liked_by.append(user_id)
 
-            return knowledge_card_dao.like_a_card(
+            result = knowledge_card_dao.like_a_card(
                 card_id=card_id,
                 likes=new_likes,
                 liked_by=updated_liked_by
             )
+            if result:
+                return {"message": "Card liked successfully"}
+            else:
+                return {"message": "Failed to like the card"}
+            
         except Exception as exception:
             print(f"error while liking the card: {exception}")
             return None
+        
+    def copy_card(self, card_id, user_id):
+        '''
+        Usage: Copy a public card for a user.
+        Parameters: 
+        Returns: str: 
+        '''
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+
+            if user_id in card.get("copied_by", []):
+                return ("You already have a copy of this card")
+            
+                # Extract fields from the dict
+            copy_card_title = card.get("title")
+            copy_card_summary = card.get("summary")
+            copy_card_note = card.get("note")
+            copy_card_source_url = card.get("source_url")
+            copy_card_tags = card.get("tags")
+            copy_card_thumbnail = card.get("thumbnail")
+            copy_card_category = card.get("category")
+            created_at = datetime.utcnow()
+            
+            new_card = KnowledgeCard(
+                user_id=user_id,
+                title=copy_card_title,
+                summary=copy_card_summary,
+                tags=copy_card_tags,
+                note=copy_card_note,
+                created_at=created_at,
+                embedded_vector=[],
+                source_url=copy_card_source_url,
+                thumbnail=copy_card_thumbnail,
+                favourite=False,
+                archive=False,
+                category=copy_card_category,
+                copied_from=card_id  
+            )
+            
+            result = knowledge_card_dao.insert_knowledge_card(card=new_card)
+                
+            copied_by = card.get("copied_by", [])
+            copied_by.append(user_id)
+            copied_by = list(set(copied_by)) # Remove duplicates
+            knowledge_card_dao.update_copied_by_list(card_id=card_id,copied_by_list=copied_by)
+                
+            return ("Card copied succssessfully") 
+        
+        except Exception as exception:
+            print(f"Error while saving copy {exception}")
+            return f"Error occurred: {str(exception)}"

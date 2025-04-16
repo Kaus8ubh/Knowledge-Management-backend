@@ -42,7 +42,7 @@ class KnowledgeCardDao:
             ]
         except Exception as exception:
             print(f"An error occurred: {exception}")
-            return None
+            return []
     
     def insert_knowledge_card(self,card: KnowledgeCard):
         """
@@ -69,22 +69,45 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
         
-    def update_card_details(self, card_id:str, user_id:str, updates:dict):
+    def update_card_details(self, card_id:str, updates:dict):
         """
         Usage: Retrieve a specific card by its id.
         Parameters: card_id (str): The ID of the card.
         Returns: Details of a knowledge cards.
         """
         try:
-            if not ObjectId.is_valid(card_id) or not ObjectId.is_valid(user_id):
+            if not ObjectId.is_valid(card_id):
                 return "Invalid card ID or user ID."
 
             result = self.knowledge_cards_collection.update_one(
-                {"user_id": ObjectId(user_id), "_id": ObjectId(card_id)},  # Filter by card ID
-                {"$set": updates}  # Apply updates
+                {"_id": ObjectId(card_id)},  # Filter by card ID
+                {"$set": updates}  
         )
             if result.modified_count > 0:
                 return "Knowledge card updated successfully."
+            else:
+                return "No changes made or card not found."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to update the knowledge card."
+        
+    def update_copied_by_list(self, card_id:str, copied_by_list:list):
+        """
+        Usage: Retrieve a specific card by its id.
+        Parameters: card_id (str): The ID of the card.
+        Returns: Details of a knowledge cards.
+        """
+        try:
+            if not ObjectId.is_valid(card_id):
+                return "Invalid card ID or user ID."
+
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},  # Filter by card ID
+                {"$set": {"copied_by": copied_by_list}}  
+        )
+            if result.modified_count > 0:
+                return "list updated successfully."
             else:
                 return "No changes made or card not found."
         
@@ -114,8 +137,8 @@ class KnowledgeCardDao:
         try:
             card_id = ObjectId(card_id)
             return self.knowledge_cards_collection.find_one({"_id": card_id})
-        except Exception as e:
-            print(f"Error getting card: {e}")
+        except Exception as exception:
+            print(f"Error getting card: {exception}")
             return None
         
     def toggle_favourite(self, card_id: str):
@@ -218,6 +241,24 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to delete the knowledge card."
+        
+    def remove_user_from_copied_by(self, original_card_id: str, user_id: str):
+        """
+        Removes a user from the copied_by list of the original card.
+        """
+        try:
+            if not ObjectId.is_valid(original_card_id):
+                return "Invalid original card ID."
+
+            self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(original_card_id)},
+                {"$pull": {"copied_by": user_id}}
+            )
+            return "User removed from copied_by list."
+        except Exception as e:
+            print(f"Failed to remove user from copied_by: {e}")
+            return "Failed to update original card."
+
         
     def update_card_shared_token(self, card_id: str, token: str):
         try:
