@@ -80,7 +80,7 @@ async def add_remove_public(card_id:str):
     """API endpoint to add or remove a card from public"""
     try:
         result = knowledge_card_service.toggle_public(card_id=card_id)
-        return JSONResponse({"message": result})
+        return JSONResponse(content={"message": result}, status_code=200)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
@@ -107,10 +107,17 @@ async def view_shared_card(token: str):
     except Exception as exception:
         raise HTTPException(status_code=400, detail= str(exception))
     
-@knowledge_card_router.post("/{card_id}/like")
+@knowledge_card_router.put("/{card_id}/like")
 async def like_a_card(card_id: str, user_id: str):
     try:
         result = knowledge_card_service.like_unlike_card(card_id=card_id, user_id=user_id)
-        return {"message": "Card liked successfully"} if result else HTTPException(status_code=400, detail="Card not found or already liked")
+        return {f"message: {result}"} if result else HTTPException(status_code=400, detail="Card not found or already liked")
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+
+@knowledge_card_router.post("/{card_id}/copy-card")
+async def copy_card(card_id: str, user_id: str):
+    try:
+        return knowledge_card_service.copy_card(card_id=card_id, user_id=user_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))

@@ -95,7 +95,8 @@ class TextProcessingWithGemini:
                         - Avoid promotional or decorative language.
                         - Maintain an informative and research-friendly tone.
                         - Ensure the summary is useful and comprehensive enough to stand on its own.
-        
+                        - Do not add any introductory or contextual phrases like "Here’s a structured summary of..." just begin summarizing the content directly.
+
                         Summarize the following document:
 
                         {combined_summary}
