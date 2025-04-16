@@ -43,7 +43,6 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
-
     
     def insert_knowledge_card(self,card: KnowledgeCard):
         """
@@ -239,3 +238,28 @@ class KnowledgeCardDao:
             return to_knowledge_card(card=card)
         except Exception as exception:
             print(f"erron finding token for sharing: {exception}")
+
+    def like_a_card(self, card_id: str, likes: int, liked_by: list):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "likes": likes,
+                    "liked_by": liked_by
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while liking the Card: {exception}")
+            return None
+        
+    def unlike_a_card(self, card_id: str, likes: int, liked_by: list):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set":{
+                    "likes":likes,
+                    "liked_by":liked_by
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while unliking the card: {exception}")

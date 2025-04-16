@@ -65,16 +65,22 @@ class KnowledgeCardService:
             print(f"Error getting archive knowledge cards: {exception}")
             return None
         
-    def get_public_cards(self):
+    def get_public_cards(self, user_id: str):
         """
         Usage: Retrieve archive knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
-        Returns: list: A list of archive knowledge cards.
+        Returns: list: A list of public knowledge cards.
         """
         try:
             cards = knowledge_card_dao.get_all_public_cards()
               
-            return [card.dict() for card in cards]
+            result = []
+            for card in cards:
+                card_dist = card.dict()
+                card_dist["liked_by_me"] = user_id in card_dist.get("liked_by",[])
+                result.append(card_dist)
+            
+            return result
 
         except Exception as exception:
             print(f"Error getting public knowledge cards: {exception}")
@@ -317,3 +323,31 @@ class KnowledgeCardService:
             raise FileNotFoundError("card not found")
         
         return  card
+    
+    def like_unlike_card(self, card_id: str, user_id: str):
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card or not card.get("public", False):
+                return None  
+
+            if user_id in card.get("liked_by", []):
+                new_likes = card.get("likes", 1) - 1
+                liked_by = card.get("liked_by", [])
+                updated_liked_by.remove(user_id)
+                return knowledge_card_dao.unlike_a_card(
+                    card_id=card_id,likes=new_likes,liked_by=updated_liked_by
+                )
+
+            new_likes = card.get("likes", 0) + 1
+            updated_liked_by = card.get("liked_by", [])
+            updated_liked_by.append(user_id)
+
+            return knowledge_card_dao.like_a_card(
+                card_id=card_id,
+                likes=new_likes,
+                liked_by=updated_liked_by
+            )
+        except Exception as exception:
+            print(f"error while liking the card: {exception}")
+            return None

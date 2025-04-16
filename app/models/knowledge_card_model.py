@@ -18,6 +18,11 @@ class KnowledgeCard(BaseModel):
     category: Optional[str]
     shared_token: Optional[str]=None
     public: Optional[bool]=None
+    likes: Optional[int]=0
+    liked_by:Optional[list]=[]
+
+class PublicKnowledgeCard(KnowledgeCard):
+    liked_by_me: bool = False
 
 class KnowledgeCardRequest(BaseModel):
     token: str

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
+from typing import List
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
 from services import knowledge_card_service
 
 knowledge_card_router = APIRouter()
@@ -23,12 +24,12 @@ async def get_archive_card(token: str):
     archive_cards = knowledge_card_service.get_archive_cards(token)
     return archive_cards
 
-@knowledge_card_router.get("/public")
-async def get_public_card():
+@knowledge_card_router.get("/public", response_model=List[PublicKnowledgeCard])
+async def get_public_card(user_id: str):
     """API endpoint to get all public cards"""
-    public_cards = knowledge_card_service.get_public_cards()
+    public_cards = knowledge_card_service.get_public_cards(user_id=user_id)
     return public_cards
-    
+
 @knowledge_card_router.post("/")
 async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
     """API endpoint to add a knowledge card."""    
@@ -105,3 +106,11 @@ async def view_shared_card(token: str):
         return knowledge_card_service.get_shared_card(token=token)
     except Exception as exception:
         raise HTTPException(status_code=400, detail= str(exception))
+    
+@knowledge_card_router.post("/{card_id}/like")
+async def like_a_card(card_id: str, user_id: str):
+    try:
+        result = knowledge_card_service.like_unlike_card(card_id=card_id, user_id=user_id)
+        return {"message": "Card liked successfully"} if result else HTTPException(status_code=400, detail="Card not found or already liked")
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
