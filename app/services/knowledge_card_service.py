@@ -1,9 +1,11 @@
 from bson import ObjectId
+from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html
 from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from dao import knowledge_card_dao, card_cluster_dao
 from services.card_cluster_service import ClusteringServices
+from fastapi.responses import JSONResponse 
 from datetime import datetime
 import io
 import secrets
@@ -398,7 +400,7 @@ class KnowledgeCardService:
             card = knowledge_card_dao.get_card_by_id(card_id=card_id)
 
             if user_id in card.get("copied_by", []):
-                return ("You already have a copy of this card")
+                raise HTTPException(status_code=400, detail={"message": "You already have a copy of this card"})
             
                 # Extract fields from the dict
             copy_card_title = card.get("title")
@@ -433,7 +435,7 @@ class KnowledgeCardService:
             copied_by = list(set(copied_by)) # Remove duplicates
             knowledge_card_dao.update_copied_by_list(card_id=card_id,copied_by_list=copied_by)
                 
-            return ("Card copied succssessfully") 
+            return JSONResponse(status_code=200, content={"message": "Card Copied to Home"})
         
         except Exception as exception:
             print(f"Error while saving copy {exception}")
