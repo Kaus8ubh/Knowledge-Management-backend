@@ -7,21 +7,21 @@ from services import knowledge_card_service
 knowledge_card_router = APIRouter()
 
 @knowledge_card_router.get("/")
-async def get_knowledge_card(token: str):
+async def get_knowledge_card(token: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all cards of the user"""
-    all_cards = knowledge_card_service.get_all_cards(token)
+    all_cards = knowledge_card_service.get_all_cards(token, skip, limit)
     return all_cards
 
 @knowledge_card_router.get("/favourite")
-async def get_favourite_card(token: str):
+async def get_favourite_card(token: str, skip: int = 0, limit: int = 4):
     """API endpoint to get favourite cards of the user"""
-    favourite_cards = knowledge_card_service.get_favourite_cards(token)
+    favourite_cards = knowledge_card_service.get_favourite_cards(token, skip, limit)
     return favourite_cards
 
 @knowledge_card_router.get("/archive")
-async def get_archive_card(token: str):
+async def get_archive_card(token: str, skip: int = 0, limit: int = 4):
     """API endpoint to get archive cards of the user"""
-    archive_cards = knowledge_card_service.get_archive_cards(token)
+    archive_cards = knowledge_card_service.get_archive_cards(token, skip, limit)
     return archive_cards
 
 @knowledge_card_router.get("/public", response_model=List[PublicKnowledgeCard])
@@ -33,11 +33,11 @@ async def get_public_card(user_id: str):
 @knowledge_card_router.post("/")
 async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
     """API endpoint to add a knowledge card."""    
-    card_data = knowledge_card_service.process_knowledge_card(knowledge_card_data)
+    new_card = knowledge_card_service.process_knowledge_card(knowledge_card_data)
 
-    if not card_data:
+    if not new_card:
         raise HTTPException(status_code=400, detail="Failed to process knowledge card")
-    return JSONResponse({ "message": f"Knowledge card {card_data} added successfully" })
+    return new_card
 
 @knowledge_card_router.put("/")
 async def edit_knowledge_card(details: EditKnowledgeCard):

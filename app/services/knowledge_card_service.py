@@ -13,7 +13,7 @@ from config import Config
 
 class KnowledgeCardService:
 
-    def get_all_cards(self, token: str):
+    def get_all_cards(self, token: str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -23,7 +23,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            all_cards = knowledge_card_dao.get_all_cards(user_id)
+            all_cards = knowledge_card_dao.get_all_cards(user_id, skip, limit)
 
             result = []
             for card in all_cards:
@@ -38,7 +38,7 @@ class KnowledgeCardService:
             print(f"Error getting knowledge cards: {exception}")
             return []
             
-    def get_favourite_cards(self, token:str):
+    def get_favourite_cards(self, token:str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve favourite knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -48,7 +48,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            cards = knowledge_card_dao.get_all_cards(user_id)
+            cards = knowledge_card_dao.get_favourite_cards(user_id, skip, limit)
               
             return [card.dict() for card in cards if card.favourite is True] if cards else []
 
@@ -56,7 +56,7 @@ class KnowledgeCardService:
             print(f"Error getting favourite knowledge cards: {exception}")
             return None
         
-    def get_archive_cards(self, token:str):
+    def get_archive_cards(self, token:str, skip: int =0, limit: int = 4):
         """
         Usage: Retrieve archive knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -66,7 +66,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            cards = knowledge_card_dao.get_all_cards(user_id)
+            cards = knowledge_card_dao.get_archived_cards(user_id, skip, limit)
               
             return [card.dict() for card in cards if card.archive is True] if cards else []
 
@@ -172,12 +172,12 @@ class KnowledgeCardService:
                                  archive=False,
                                  category=category)
             
-            result = knowledge_card_dao.insert_knowledge_card(card=card)
+            new_card = knowledge_card_dao.insert_knowledge_card(card=card)
 
             # clustering = ClusteringServices.cluster_knowledge_cards(user_id)
             # print("proceeding for clustering")
             
-            return result
+            return new_card
 
         except Exception as exception:
             print(f"Error processing knowledge card: {exception}")
