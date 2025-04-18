@@ -11,24 +11,59 @@ class KnowledgeCardDao:
         """
         self.knowledge_cards_collection = db_instance.get_collection("knowledge_cards_collection")
 
-    def get_all_cards(self,user_id:str):
+    def get_all_cards(self,user_id:str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all knowledge cards for a specific user.
         Parameters: user_id (str): The ID of the user whose cards are to be retrieved.
         Returns: list: A list of knowledge cards.
         """
         try:
-            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)})
+            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)}).sort("created_at", -1).skip(skip).limit(limit)
             
             return [
-                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
+                to_knowledge_card(card)
                 for card in cards
             ]
         
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
-        
+    
+    def get_all_cards_no_limit(self, user_id: str):
+        """
+        Retrieve all knowledge cards for a specific user with no pagination.
+        """
+        try:
+            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)}).sort("created_at", -1)
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    def get_favourite_cards(self, user_id: str, skip: int = 0, limit: int = 4):
+        try:
+            cards = self.knowledge_cards_collection.find({
+                "user_id": ObjectId(user_id),
+                "favourite": True
+            }).sort("created_at", -1).skip(skip).limit(limit)
+
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    def get_archived_cards(self, user_id: str, skip: int = 0, limit: int = 4):
+        try:
+            cards = self.knowledge_cards_collection.find({
+                "user_id": ObjectId(user_id),
+                "archive": True
+            }).sort("created_at", -1).skip(skip).limit(limit)
+
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
     def get_all_public_cards(self):
         """
         Usage: Retrieve all public knowledge cards.
@@ -64,7 +99,9 @@ class KnowledgeCardDao:
             # knowledge_card["created_at"]=datetime.utcnow.isoformat()
 
             result = self.knowledge_cards_collection.insert_one(knowledge_card)
-            return str(result.inserted_id)
+            inserted_id = result.inserted_id
+            new_card = self.knowledge_cards_collection.find_one({"_id": inserted_id})
+            return to_knowledge_card(new_card)
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
@@ -189,7 +226,9 @@ class KnowledgeCardDao:
                 {"_id": card_id},
                 {"$set": {"archive": new_archive_status}}
             )
-            return "Card moved to archives successfully."
+            if new_archive_status:
+                return "Card Archived"
+            return "Card Unarchived"
         
         except Exception as exception:
             print(f"An error occurred: {exception}")

@@ -1,9 +1,11 @@
 from bson import ObjectId
+from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html
 from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from dao import knowledge_card_dao, card_cluster_dao
 from services.card_cluster_service import ClusteringServices
+from fastapi.responses import JSONResponse 
 from datetime import datetime
 import io
 import secrets
@@ -11,7 +13,7 @@ from config import Config
 
 class KnowledgeCardService:
 
-    def get_all_cards(self, token: str):
+    def get_all_cards(self, token: str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -21,7 +23,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            all_cards = knowledge_card_dao.get_all_cards(user_id)
+            all_cards = knowledge_card_dao.get_all_cards(user_id, skip, limit)
 
             result = []
             for card in all_cards:
@@ -36,7 +38,7 @@ class KnowledgeCardService:
             print(f"Error getting knowledge cards: {exception}")
             return []
             
-    def get_favourite_cards(self, token:str):
+    def get_favourite_cards(self, token:str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve favourite knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -46,7 +48,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            cards = knowledge_card_dao.get_all_cards(user_id)
+            cards = knowledge_card_dao.get_favourite_cards(user_id, skip, limit)
               
             return [card.dict() for card in cards if card.favourite is True] if cards else []
 
@@ -54,7 +56,7 @@ class KnowledgeCardService:
             print(f"Error getting favourite knowledge cards: {exception}")
             return None
         
-    def get_archive_cards(self, token:str):
+    def get_archive_cards(self, token:str, skip: int =0, limit: int = 4):
         """
         Usage: Retrieve archive knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
@@ -64,7 +66,7 @@ class KnowledgeCardService:
             decoded_token = decode_access_token(token)
             user_id = decoded_token["userId"]
 
-            cards = knowledge_card_dao.get_all_cards(user_id)
+            cards = knowledge_card_dao.get_archived_cards(user_id, skip, limit)
               
             return [card.dict() for card in cards if card.archive is True] if cards else []
 
@@ -170,12 +172,12 @@ class KnowledgeCardService:
                                  archive=False,
                                  category=category)
             
-            result = knowledge_card_dao.insert_knowledge_card(card=card)
+            new_card = knowledge_card_dao.insert_knowledge_card(card=card)
 
             # clustering = ClusteringServices.cluster_knowledge_cards(user_id)
             # print("proceeding for clustering")
             
-            return result
+            return new_card
 
         except Exception as exception:
             print(f"Error processing knowledge card: {exception}")
@@ -398,7 +400,7 @@ class KnowledgeCardService:
             card = knowledge_card_dao.get_card_by_id(card_id=card_id)
 
             if user_id in card.get("copied_by", []):
-                return ("You already have a copy of this card")
+                raise HTTPException(status_code=400, detail={"message": "You already have a copy of this card"})
             
                 # Extract fields from the dict
             copy_card_title = card.get("title")
@@ -433,7 +435,7 @@ class KnowledgeCardService:
             copied_by = list(set(copied_by)) # Remove duplicates
             knowledge_card_dao.update_copied_by_list(card_id=card_id,copied_by_list=copied_by)
                 
-            return ("Card copied succssessfully") 
+            return JSONResponse(status_code=200, content={"message": "Card Copied to Home"})
         
         except Exception as exception:
             print(f"Error while saving copy {exception}")
