@@ -296,11 +296,10 @@ class KnowledgeCardService:
             if not card:
                 return "Card not found."
             if card.get("copied_from"):
-                return "You cannot make a copied card public."
+                return JSONResponse(status_code=400, content={"message": "You cannot make a copied card public."})
             
             result = knowledge_card_dao.toggle_public(card_id=card_id)
-            return result
-
+            return JSONResponse(status_code=200, content={"message": "Public status toggled successfully."})
         except Exception as exception:
             print(f"Error while going public: {exception}")
             return "Failed to toggle public status."

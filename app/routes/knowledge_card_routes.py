@@ -80,7 +80,7 @@ async def add_remove_public(card_id:str):
     """API endpoint to add or remove a card from public"""
     try:
         result = knowledge_card_service.toggle_public(card_id=card_id)
-        return JSONResponse(content={"message": result}, status_code=200)
+        return result
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
