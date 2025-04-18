@@ -11,24 +11,74 @@ class KnowledgeCardDao:
         """
         self.knowledge_cards_collection = db_instance.get_collection("knowledge_cards_collection")
 
-    def get_all_cards(self,user_id:str):
+    def get_all_cards(self,user_id:str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all knowledge cards for a specific user.
         Parameters: user_id (str): The ID of the user whose cards are to be retrieved.
         Returns: list: A list of knowledge cards.
         """
         try:
-            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)})
+            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)}).sort("created_at", -1).skip(skip).limit(limit)
             
             return [
-                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
+                to_knowledge_card(card)
                 for card in cards
             ]
         
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
-        
+    
+    def get_all_cards_no_limit(self, user_id: str):
+        """
+        Retrieve all knowledge cards for a specific user with no pagination.
+        """
+        try:
+            cards = self.knowledge_cards_collection.find({"user_id": ObjectId(user_id)}).sort("created_at", -1)
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    def get_favourite_cards(self, user_id: str, skip: int = 0, limit: int = 4):
+        try:
+            cards = self.knowledge_cards_collection.find({
+                "user_id": ObjectId(user_id),
+                "favourite": True
+            }).sort("created_at", -1).skip(skip).limit(limit)
+
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    def get_archived_cards(self, user_id: str, skip: int = 0, limit: int = 4):
+        try:
+            cards = self.knowledge_cards_collection.find({
+                "user_id": ObjectId(user_id),
+                "archive": True
+            }).sort("created_at", -1).skip(skip).limit(limit)
+
+            return [to_knowledge_card(card) for card in cards]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return None
+
+    def get_all_public_cards(self):
+        """
+        Usage: Retrieve all public knowledge cards.
+        Returns: list: A list of public knowledge cards.
+        """
+        try:
+            cards = self.knowledge_cards_collection.find({"public": True})
+            return [
+                to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
+                for card in cards
+            ]
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return []
+    
     def insert_knowledge_card(self,card: KnowledgeCard):
         """
         Usage:Insert a knowledge card into MongoDB"
@@ -49,27 +99,52 @@ class KnowledgeCardDao:
             # knowledge_card["created_at"]=datetime.utcnow.isoformat()
 
             result = self.knowledge_cards_collection.insert_one(knowledge_card)
-            return str(result.inserted_id)
+            inserted_id = result.inserted_id
+            new_card = self.knowledge_cards_collection.find_one({"_id": inserted_id})
+            return to_knowledge_card(new_card)
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return None
         
-    def update_card_details(self, card_id:str, user_id:str, updates:dict):
+    def update_card_details(self, card_id:str, updates:dict):
         """
         Usage: Retrieve a specific card by its id.
         Parameters: card_id (str): The ID of the card.
         Returns: Details of a knowledge cards.
         """
         try:
-            if not ObjectId.is_valid(card_id) or not ObjectId.is_valid(user_id):
+            if not ObjectId.is_valid(card_id):
                 return "Invalid card ID or user ID."
 
             result = self.knowledge_cards_collection.update_one(
-                {"user_id": ObjectId(user_id), "_id": ObjectId(card_id)},  # Filter by card ID
-                {"$set": updates}  # Apply updates
+                {"_id": ObjectId(card_id)},  # Filter by card ID
+                {"$set": updates}  
         )
             if result.modified_count > 0:
                 return "Knowledge card updated successfully."
+            else:
+                return "No changes made or card not found."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to update the knowledge card."
+        
+    def update_copied_by_list(self, card_id:str, copied_by_list:list):
+        """
+        Usage: Retrieve a specific card by its id.
+        Parameters: card_id (str): The ID of the card.
+        Returns: Details of a knowledge cards.
+        """
+        try:
+            if not ObjectId.is_valid(card_id):
+                return "Invalid card ID or user ID."
+
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},  # Filter by card ID
+                {"$set": {"copied_by": copied_by_list}}  
+        )
+            if result.modified_count > 0:
+                return "list updated successfully."
             else:
                 return "No changes made or card not found."
         
@@ -99,8 +174,8 @@ class KnowledgeCardDao:
         try:
             card_id = ObjectId(card_id)
             return self.knowledge_cards_collection.find_one({"_id": card_id})
-        except Exception as e:
-            print(f"Error getting card: {e}")
+        except Exception as exception:
+            print(f"Error getting card: {exception}")
             return None
         
     def toggle_favourite(self, card_id: str):
@@ -145,18 +220,47 @@ class KnowledgeCardDao:
             if not card:
                 return "Card not found."
 
-            # Toggle the favourite status
+            # Toggle the archive status
             new_archive_status = not card.get("archive", False)
             self.knowledge_cards_collection.update_one(
                 {"_id": card_id},
                 {"$set": {"archive": new_archive_status}}
             )
-            return "Card moved to archives successfully."
+            if new_archive_status:
+                return "Card Archived"
+            return "Card Unarchived"
         
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to move to archives."
         
+    def toggle_public(self, card_id: str):
+        """
+        Usage: Toggle the public status of a knowledge card.
+        Parameters:
+            card_id (str): The ID of the card to be toggled.
+        Returns:
+            str: A message indicating the result of the operation.
+        """
+        try:
+            card_id = ObjectId(card_id)
+            # Check if the card exists
+            card = self.knowledge_cards_collection.find_one({"_id": card_id})
+            if not card:
+                return "Card not found."
+
+            # Toggle the public status
+            new_public_status = not card.get("public", False)
+            self.knowledge_cards_collection.update_one(
+                {"_id": card_id},
+                {"$set": {"public": new_public_status}}
+            )
+            return "Card moved to global successfully."
+        
+        except Exception as exception:
+            print(f"An error occurred: {exception}")
+            return "Failed to move to global."
+    
     def delete_card(self, card_id: str):
         """
         Usage: Delete a knowledge card by ID.
@@ -176,3 +280,66 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occurred: {exception}")
             return "Failed to delete the knowledge card."
+        
+    def remove_user_from_copied_by(self, original_card_id: str, user_id: str):
+        """
+        Removes a user from the copied_by list of the original card.
+        """
+        try:
+            if not ObjectId.is_valid(original_card_id):
+                return "Invalid original card ID."
+
+            self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(original_card_id)},
+                {"$pull": {"copied_by": user_id}}
+            )
+            return "User removed from copied_by list."
+        except Exception as e:
+            print(f"Failed to remove user from copied_by: {e}")
+            return "Failed to update original card."
+
+        
+    def update_card_shared_token(self, card_id: str, token: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "shared_token": token
+                    }
+                }
+            )
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to generate shareable LINK"
+    
+    def get_card_by_token(self, token: str):
+        try:
+            card = self.knowledge_cards_collection.find_one({"shared_token": token})
+            return to_knowledge_card(card=card)
+        except Exception as exception:
+            print(f"erron finding token for sharing: {exception}")
+
+    def like_a_card(self, card_id: str, likes: int, liked_by: list):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "likes": likes,
+                    "liked_by": liked_by
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while liking the Card: {exception}")
+            return None
+        
+    def unlike_a_card(self, card_id: str, likes: int, liked_by: list):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set":{
+                    "likes":likes,
+                    "liked_by":liked_by
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while unliking the card: {exception}")

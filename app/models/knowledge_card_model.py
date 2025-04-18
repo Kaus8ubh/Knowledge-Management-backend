@@ -15,7 +15,16 @@ class KnowledgeCard(BaseModel):
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
-    category: Optional[str] 
+    category: Optional[str]
+    shared_token: Optional[str]=None
+    public: Optional[bool]=False
+    likes: Optional[int]=0
+    liked_by:Optional[list]=[]
+    copied_by:Optional[list]=[]
+    copied_from: Optional[str] = None
+
+class PublicKnowledgeCard(KnowledgeCard):
+    liked_by_me: bool = False
 
 class KnowledgeCardRequest(BaseModel):
     token: str
