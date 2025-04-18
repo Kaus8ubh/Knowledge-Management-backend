@@ -1,5 +1,8 @@
 from bson import ObjectId
 from datetime import datetime
+
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 from database import db_instance
 from models import KnowledgeCard
 from utils import to_knowledge_card
@@ -247,7 +250,7 @@ class KnowledgeCardDao:
             # Check if the card exists
             card = self.knowledge_cards_collection.find_one({"_id": card_id})
             if not card:
-                return "Card not found."
+                raise HTTPException(status_code=404, detail={"message": "Card not found"})
 
             # Toggle the public status
             new_public_status = not card.get("public", False)
@@ -255,7 +258,7 @@ class KnowledgeCardDao:
                 {"_id": card_id},
                 {"$set": {"public": new_public_status}}
             )
-            return "Card moved to global successfully."
+            return JSONResponse(status_code=200, content={"message": "Card made public" if new_public_status else "Card made private"})
         
         except Exception as exception:
             print(f"An error occurred: {exception}")
