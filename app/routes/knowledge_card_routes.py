@@ -25,9 +25,9 @@ async def get_archive_card(token: str, skip: int = 0, limit: int = 4):
     return archive_cards
 
 @knowledge_card_router.get("/public", response_model=List[PublicKnowledgeCard])
-async def get_public_card(user_id: str):
+async def get_public_card(user_id: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all public cards"""
-    public_cards = knowledge_card_service.get_public_cards(user_id=user_id)
+    public_cards = knowledge_card_service.get_public_cards(user_id=user_id, skip=skip, limit=limit)
     return public_cards
 
 @knowledge_card_router.post("/")

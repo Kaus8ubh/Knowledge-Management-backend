@@ -74,14 +74,14 @@ class KnowledgeCardService:
             print(f"Error getting archive knowledge cards: {exception}")
             return None
         
-    def get_public_cards(self, user_id: str):
+    def get_public_cards(self, user_id: str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve archive knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
         Returns: list: A list of public knowledge cards.
         """
         try:
-            cards = knowledge_card_dao.get_all_public_cards()
+            cards = knowledge_card_dao.get_all_public_cards(skip, limit)
               
             result = []
             for card in cards:
