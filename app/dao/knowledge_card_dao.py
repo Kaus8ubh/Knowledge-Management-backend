@@ -176,7 +176,8 @@ class KnowledgeCardDao:
         """
         try:
             card_id = ObjectId(card_id)
-            return self.knowledge_cards_collection.find_one({"_id": card_id})
+            result = self.knowledge_cards_collection.find_one({"_id": card_id})
+            return result
         except Exception as exception:
             print(f"Error getting card: {exception}")
             return None
@@ -346,3 +347,27 @@ class KnowledgeCardDao:
             )
         except Exception as exception:
             print(f"Error while unliking the card: {exception}")
+
+    def bookmark_a_card(self, card_id: str, user_id: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$addToSet": {
+                    "bookmarked_by": user_id
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while bookmarking the card: {exception}")
+            return None
+        
+    def unbookmark_a_card(self, card_id: str, user_id: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$pull": {
+                    "bookmarked_by": user_id
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while unbookmarking the card: {exception}")
+            return None

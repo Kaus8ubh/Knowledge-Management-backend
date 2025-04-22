@@ -1,11 +1,15 @@
+import os
+import tempfile
+from fastapi import UploadFile, File, Form
 from bson import ObjectId
 from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html
+from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
 from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
-from dao import knowledge_card_dao, card_cluster_dao
+from dao import knowledge_card_dao, card_cluster_dao, user_dao
 from services.card_cluster_service import ClusteringServices
-from fastapi.responses import JSONResponse 
+from fastapi.responses import JSONResponse  
 from datetime import datetime
 import io
 import secrets
@@ -143,7 +147,8 @@ class KnowledgeCardService:
                 print("tags done")
                 category = gemini_text_processor.generate_category(summary)
                 print("category done: " + category)
-                embedding = embedder_for_title.embed_text(title)
+                # embedding = embedder_for_title.embed_text(title)
+                embedding = []
                 print("embedding done")
                 
             else:
@@ -182,7 +187,70 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error processing knowledge card: {exception}")
             return None
+        
+    async def process_file_for_kc(self, token: str, file: UploadFile, note: str = ""):
+        try:
+            decoded_token = decode_access_token(token)
+            print(token)
+            user_id = decoded_token["userId"]
+            print(user_id)
+            filename = file.filename
+            suffix = filename.split('.')[-1].lower()
 
+            # Save data to temp file and extract text
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{suffix}") as temp:
+                content = await file.read()  # Await the file read
+                temp.write(content)
+                temp_path = temp.name
+
+            if suffix == "pdf":
+                text = extract_text_from_pdf(temp_path)
+            elif suffix == "docx":
+                text = extract_text_from_docx(temp_path)
+            else:
+                os.remove(temp_path)  # Clean up the temporary file
+                return {"error": "unsupported file type"}
+
+            os.remove(temp_path)  # Clean up the temporary file
+
+            # Text processing pipeline
+            chunks = scraper.split_content(text)
+            summary = gemini_text_processor.summarize_text(chunks)
+            title = gemini_text_processor.get_title(summary)
+            tags = gemini_text_processor.generate_tags(summary)
+            category = gemini_text_processor.generate_category(summary)
+            embedding = []  # Placeholder for embedding (if you plan to integrate later)
+
+            markup_summary = convert_summary_to_html(summary)
+            created_at = datetime.utcnow().isoformat()
+            final_note = note if note else "No Note Yet"
+
+            thumbnail = get_thumbnail(category=category)
+
+            # Create KnowledgeCard object
+            card = KnowledgeCard(
+                user_id=user_id,
+                title=title,
+                summary=markup_summary,
+                tags=tags,
+                note=final_note,
+                created_at=created_at,
+                embedded_vector=embedding,
+                source_url="",  # No URL for files
+                thumbnail=thumbnail,
+                favourite=False,
+                archive=False,
+                category=category
+            )
+
+            # Insert the new card into the database
+            new_card = knowledge_card_dao.insert_knowledge_card(card)
+            return new_card
+
+        except Exception as exception:
+            print(f"Error processing file card: {exception}")
+            return None
+        
     def edit_knowledge_card(self, details: knowledge_card_model):
         """
         Usage: Edit a knowledge card.
@@ -342,12 +410,12 @@ class KnowledgeCardService:
         return share_url
     
     def get_shared_card(self, token: str):
-        card = knowledge_card_dao.get_card_by_token(token=token)
+        result = knowledge_card_dao.get_card_by_token(token=token)
 
-        if not card:
+        if not result:
             raise FileNotFoundError("card not found")
         
-        return  card
+        return  result
     
     def like_unlike_card(self, card_id: str, user_id: str):
         try:
@@ -439,3 +507,77 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error while saving copy {exception}")
             return f"Error occurred: {str(exception)}"
+        
+    def toggle_bookmark_card(self, card_id: str, user_id: str):
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            user = user_dao.get_user_by_id(user_id=user_id)
+            if not user:
+                return None
+            if not card or not card.get("public", False):
+                return None  
+    
+            if user_id in card.get("bookmarked_by", []):
+                update_card = knowledge_card_dao.unbookmark_a_card(
+                    card_id=card_id,
+                    user_id=user_id
+                )
+                update_user = user_dao.remove_bookmarked_card(
+                    user_id=user_id,
+                    card_id=card_id                
+                )
+                if update_card and update_user:
+                    return JSONResponse(status_code=200, content={"message": "Card unbookmarked successfully"})
+                else:
+                    return JSONResponse(status_code=400, content={"message": "Failed to unbookmark the card"})
+
+            update_card = knowledge_card_dao.bookmark_a_card(
+                card_id=card_id,
+                user_id=user_id
+            )
+            update_user = user_dao.add_bookmarked_card(
+                user_id=user_id,
+                card_id=card_id
+            )
+            if update_card:
+                print("card updated")
+            else:
+                print("card not updated")
+            if update_user:
+                print("user updated")
+            else:
+                print("user not updated")
+            if update_card and update_user:
+                return JSONResponse(status_code=200, content={"message": "Card bookmarked successfully"})
+            else:
+                return JSONResponse(status_code=400, content={"message": "Failed to bookmark the card"})
+            
+        except Exception as exception:
+            print(f"error while bookmarking the card: {exception}")
+            return None
+        
+    def get_bookmarked_cards(self, user_id: str):
+        """
+        Usage: Get all bookmarked cards for a user.
+        Parameters: user_id (str): The ID of the user whose bookmarked cards are to be retrieved.
+        Returns: list: A list of bookmarked cards.
+        """
+        try:
+            user = user_dao.get_user_by_id(user_id=user_id)
+            if not user:
+                return None
+            
+            bookmarked_cards = user.get("bookmarked_cards", [])
+            if not bookmarked_cards:
+                return None
+            result = []
+            for card in bookmarked_cards:
+                card_data = knowledge_card_dao.get_card_by_id(card_id=card)
+                if card_data:
+                    result.append(card_data)
+
+            return jsonable_encoder(result, custom_encoder={ObjectId: str})
+        
+        except Exception as exception:
+            print(f"Error getting bookmarked cards: {exception}")
+            return None

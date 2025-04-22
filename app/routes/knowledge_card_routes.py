@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List
+from fastapi import UploadFile, File, Form
+from typing import List, Optional
 from fastapi.responses import JSONResponse
 from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
 from services import knowledge_card_service
@@ -37,6 +38,19 @@ async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
 
     if not new_card:
         raise HTTPException(status_code=400, detail="Failed to process knowledge card")
+    return new_card
+
+@knowledge_card_router.post("/upload-file")
+async def add_knowledge_card_from_file(
+        token: str = Form(...),
+        note: Optional[str] = Form(""),
+        file: UploadFile = File(...)
+        ):
+    """API endpoint to add knowledge card from a file (pdf/docx)"""
+    new_card = await knowledge_card_service.process_file_for_kc(token=token, file=file, note=note)
+
+    if not new_card:
+        raise HTTPException(status_code=400, detail="Failed to process knowledge card from file")
     return new_card
 
 @knowledge_card_router.put("/")
@@ -96,7 +110,9 @@ async def delete_card(card_id:str, user_id: str):
 @knowledge_card_router.post("/{card_id}/generate-share-link")
 async def generate_share_link(card_id: str, user_id: str):
     try:
-        return {"share_url": knowledge_card_service.generate_share_link(card_id=card_id, user_id=user_id)}
+        result = {"share_url": knowledge_card_service.generate_share_link(card_id=card_id, user_id=user_id)}
+        print(result)
+        return JSONResponse(content=result, status_code=200)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
@@ -119,5 +135,21 @@ async def like_a_card(card_id: str, user_id: str):
 async def copy_card(card_id: str, user_id: str):
     try:
         return knowledge_card_service.copy_card(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/bookmark")
+async def toggle_bookmark_card(card_id:str, user_id: str):
+    """API endpoint to bookmark public card"""
+    try:
+        return knowledge_card_service.toggle_bookmark_card(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/bookmarked")
+async def get_bookmarked_cards(user_id: str):
+    """API endpoint to get all bookmarked cards"""
+    try:
+        return knowledge_card_service.get_bookmarked_cards(user_id=user_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))

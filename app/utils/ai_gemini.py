@@ -75,32 +75,42 @@ class TextProcessingWithGemini:
 
                 # Generate a refined summary in a structured format
                 response = client.generate_content(f"""
-                        You are provided with a collection of documents that together form a single comprehensive document. 
-                        A researcher needs a summary that is rich and self-contained, so they can understand the full scope without reading the original sources.
+                            You are provided with a collection of documents that together form a single comprehensive document.
+                            A researcher needs a summary that is informative, clear, and structured in a visually engaging format using emojis and headings. Your task is to generate a rich, self-contained summary that does not require the reader to refer back to the original documents.
 
-                        Your task is to generate a structured summary with expanded, informative sections:
+                            **Required Output Format:**
 
-                        **Format:**
-                        - **Introduction**: Provide a clear and concise overview of what the document is about, its objective, and its context.
-                        
-                        - **Key Highlights**:
-                            • List each core idea, concept, method, or insight in separate bullet points.
-                            • For each point, include 2–4 sentences explaining the idea in enough detail so that the reader can grasp the full meaning without needing to refer to the original article.
-                            • If any processes, steps, methods, or frameworks are described in the content, explain them clearly and thoroughly.
-                            • Use examples or brief elaborations when they help clarify the point.
+                            **Summary**  
+                            Write a concise 1–2 sentence overview that clearly explains what the document is about, its main focus, and what the reader will learn.
 
-                        - **Conclusion**: Summarize the key takeaway, implications, or suggested next steps, if applicable.
+                            **Highlights**  
+                            List the most important features, concepts, or components using bullet points with relevant emojis.  
+                            Each bullet should be 1-2 sentence long and written in a simple, clear style.
 
-                        **Guidelines:**
-                        - Avoid promotional or decorative language.
-                        - Maintain an informative and research-friendly tone.
-                        - Ensure the summary is useful and comprehensive enough to stand on its own.
-                        - Do not add any introductory or contextual phrases like "Here’s a structured summary of..." just begin summarizing the content directly.
+                            Example format:  
+                            🌐 Domain and Hosting: Acquire a domain name and hosting for your website.
 
-                        Summarize the following document:
+                            **Key Insights**  
+                            Provide an expanded explanation of the core ideas or methods introduced in the content.  
+                            Each bullet point should start with an emoji and bolded heading, followed by 2–4 explanatory sentences.  
+                            If any processes, frameworks, or systems are described, explain them clearly.  
+                            Use examples when they help make the concept easier to understand.
 
-                        {combined_summary}
-                    """)
+                            Example format:  
+                            🌍 **Understanding Domain and Hosting**: A domain is your website’s address, while hosting is the service that stores your site files. Both are essential for getting your site online. Choosing the right provider ensures good performance and security.
+
+                            **Guidelines:**  
+                            - Use emojis to help structure and clarify the content visually.  
+                            - Maintain a professional but friendly and educational tone.  
+                            - Avoid promotional language.  
+                            - Do not include extra preamble like “Here’s the summary…” — just present the sections directly.  
+                            - Ensure the summary is self-contained and stands alone.
+
+                            Summarize the following document in this format:
+
+                            {combined_summary}
+
+                        """)
 
 
                 final_summary = self.extract_text_from_response(response)
