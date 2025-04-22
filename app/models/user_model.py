@@ -8,3 +8,4 @@ class User(BaseModel):
     picture: str
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
+    bookmarked_cards: Optional[list] = []
