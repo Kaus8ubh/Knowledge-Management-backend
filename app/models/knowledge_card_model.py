@@ -22,6 +22,7 @@ class KnowledgeCard(BaseModel):
     liked_by:Optional[list]=[]
     copied_by:Optional[list]=[]
     copied_from: Optional[str] = None
+    bookmarked_by: Optional[list] = []
 
 class PublicKnowledgeCard(KnowledgeCard):
     liked_by_me: bool = False
