@@ -581,3 +581,6 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error getting bookmarked cards: {exception}")
             return None
+        
+    def update_card_category(self, card_id: str, category: str):
+        return knowledge_card_dao.update_card_category_in_db(card_id, category)

@@ -37,3 +37,6 @@ class EditKnowledgeCard(BaseModel):
     user_id: str
     summary: Optional[str]
     note: Optional[str]
+
+class UpdateCategoryModel(BaseModel):
+    category: str

@@ -371,3 +371,17 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"Error while unbookmarking the card: {exception}")
             return None
+        
+    def update_card_category_in_db(self, card_id: str, category: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$set": {"category": category}},
+                return_document=True
+            )
+            if result:
+                return result.get("category", "")
+            return None
+        except Exception as e:
+            print(f"Error updating category: {e}")
+            return None

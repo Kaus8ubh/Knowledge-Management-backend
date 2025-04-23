@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
 from typing import List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel
 from services import knowledge_card_service
 
 knowledge_card_router = APIRouter()
@@ -153,3 +153,10 @@ async def get_bookmarked_cards(user_id: str):
         return knowledge_card_service.get_bookmarked_cards(user_id=user_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/update-category")
+async def update_category(card_id: str, payload: UpdateCategoryModel):
+    updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
+    if updated_card:
+        return updated_card
+    raise HTTPException(status_code=404, detail="Card not found")
