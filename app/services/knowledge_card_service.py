@@ -14,6 +14,9 @@ from datetime import datetime
 import io
 import secrets
 from config import Config
+from docx import Document
+from html2docx import html2docx
+
 
 class KnowledgeCardService:
 
