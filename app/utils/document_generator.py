@@ -4,6 +4,7 @@ from docx import Document
 from docx.shared import Pt
 from bs4 import BeautifulSoup  
 import io
+from weasyprint import HTML
 
 class DocumentGenerator:
 
@@ -14,15 +15,10 @@ class DocumentGenerator:
         return soup
 
     def generate_card_pdf(self,card_data):
-        """generate pdf document from card data"""
-        pdf = FPDF()
-        pdf.add_page()
+        """Generate a PDF with proper formatting using HTML and WeasyPrint."""
 
-        # title
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, card_data.get("title", "Knowledge Card"), ln=True)
-
-       # creation date
+        # Format creation date
+        created_at_str = ""
         if "created_at" in card_data:
             created_at = card_data["created_at"]
             if isinstance(created_at, str):
@@ -32,38 +28,53 @@ class DocumentGenerator:
                     try:
                         created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
                     except Exception:
-                        created_at = None  # fallback if parsing fails
-
+                        created_at = None
             if created_at:
-                pdf.set_font("Arial", "I", 10)
-                pdf.cell(0, 8, f"Created: {created_at.strftime('%Y-%m-%d')}", ln=True)
+                created_at_str = f"<h3><em>Created: {created_at.strftime('%Y-%m-%d')}</em></h3>"
 
-        # notes
-        if "note" in card_data:
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, "Note:", ln=True)
-            pdf.set_font("Arial", "", 12)
-            note_html = card_data["note"]
-            note_content = self._convert_html_to_text(note_html)
-            pdf.multi_cell(0, 10, note_content.text)    
+        # HTML template
+        html_content = f"""
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }}
+                    h1 {{
+                        font-size: 28px;
+                        font-weight: bold;
+                    }}
+                    h2 {{
+                        font-size: 18px;
+                        margin-top: 20px;
+                    }}
+                    p {{
+                        font-size: 14px;
+                        line-height: 1.6;
+                    }}
+                    .source {{
+                        color: blue;
+                    }}
+                </style>
+            </head>
+            <body>
+                <h1>{card_data.get("title", "Knowledge Card")}</h1>
+                {created_at_str}
+                <h3 class="source"><em>Source: {card_data.get("source_url", "N/A")}</em></h3>
+                <hr>
+                <h2>Note:</h2>
+                {card_data.get("note", "<p>No notes.</p>")}
+                <hr>
+                <h2>Summary:</h2>
+                {card_data.get("summary", "<p>No summary.</p>")}
+            </body>
+        </html>
+        """
 
-        # summary
-        if "summary" in card_data:
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, "Summary:", ln=True)
-            pdf.set_font("Arial", "", 12)
-            summary_html = card_data["summary"]
-            summary_content = self._convert_html_to_text(summary_html)
-            pdf.multi_cell(0, 10, summary_content.text)
-
-        # source URL
-        if "source_url" in card_data:
-            pdf.set_font("Arial", "I", 10)
-            pdf.cell(0, 10, f"Source: {card_data['source_url']}", ln=True)
-
-        # Return the PDF as bytes
-        # Write PDF content to BytesIO buffer
-        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        # Generate and return PDF as bytes
+        pdf_bytes = HTML(string=html_content).write_pdf()
         return pdf_bytes
     
     def generate_card_docx(self, card_data):
