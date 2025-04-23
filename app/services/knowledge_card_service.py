@@ -91,6 +91,7 @@ class KnowledgeCardService:
             for card in cards:
                 card_dist = card.dict()
                 card_dist["liked_by_me"] = user_id in (card_dist.get("liked_by") or [])
+                card_dist["bookmarked_by_me"] = user_id in (card_dist.get("bookmarked_by") or [])
                 result.append(card_dist)
             
             return result
@@ -121,11 +122,12 @@ class KnowledgeCardService:
 
             if source_url:
                 if is_youtube_url(source_url):
-                    yt_transcript = get_yt_transcript_text(source_url)
+                    content = get_yt_transcript_text(source_url)
                     print("transcript done")
-                    if not yt_transcript:
+                    print(content)
+                    if not content:
                         return None
-                    chunks = scraper.split_content(yt_transcript)
+                    chunks = scraper.split_content(content)
                 else:
                     # Scrape content from the given URL
                     content = scraper.scrape_web(source_url)
@@ -135,6 +137,8 @@ class KnowledgeCardService:
                     body_content = scraper.extract_body_content(content)
                     print("body done")
                     cleaned_content = scraper.clean_body_content(body_content)
+                    print("cleaned done")
+                    print(cleaned_content)
                     chunks = scraper.split_content(cleaned_content)
                     
                 summary = gemini_text_processor.summarize_text(chunks)
@@ -513,11 +517,12 @@ class KnowledgeCardService:
             card = knowledge_card_dao.get_card_by_id(card_id=card_id)
             user = user_dao.get_user_by_id(user_id=user_id)
             if not user:
-                return None
+                return JSONResponse(status_code=404, content={"message": "User not found"})
             if not card or not card.get("public", False):
-                return None  
+                return JSONResponse(status_code=404, content={"message": "Card not found"})  
     
             if user_id in card.get("bookmarked_by", []):
+                print("unbookmarking")
                 update_card = knowledge_card_dao.unbookmark_a_card(
                     card_id=card_id,
                     user_id=user_id
@@ -539,14 +544,7 @@ class KnowledgeCardService:
                 user_id=user_id,
                 card_id=card_id
             )
-            if update_card:
-                print("card updated")
-            else:
-                print("card not updated")
-            if update_user:
-                print("user updated")
-            else:
-                print("user not updated")
+    
             if update_card and update_user:
                 return JSONResponse(status_code=200, content={"message": "Card bookmarked successfully"})
             else:
@@ -563,21 +561,26 @@ class KnowledgeCardService:
         Returns: list: A list of bookmarked cards.
         """
         try:
+            print("getting bookmarked cards")
             user = user_dao.get_user_by_id(user_id=user_id)
             if not user:
-                return None
+                print("user not found")
+                return []
             
             bookmarked_cards = user.get("bookmarked_cards", [])
             if not bookmarked_cards:
-                return None
+                print("no bookmarked cards")
+                return []
             
             paginated_bookmarked_cards = bookmarked_cards[skip:skip + limit]
 
             result = []
-            for card in paginated_bookmarked_cards:
-                card_data = knowledge_card_dao.get_card_by_id(card_id=card)
+            for card_id in paginated_bookmarked_cards:
+                card_data = knowledge_card_dao.get_card_by_id(card_id=card_id)
                 if card_data:
-                    result.append(card_data)
+                    # Normalize _id to card_id
+                    card_data["card_id"] = str(card_data["_id"])
+                    result.append(card_data)                  
             
             # Check if we need to fetch more cards
             if len(paginated_bookmarked_cards) == limit:
@@ -592,3 +595,50 @@ class KnowledgeCardService:
         
     def update_card_category(self, card_id: str, category: str):
         return knowledge_card_dao.update_card_category_in_db(card_id, category)
+        
+    def generate_qna(self, card_id: str, user_id: str ):
+        """
+        Usage: Generate QnA from a knowledge card.
+        Parameters: card_id (str): The ID of the card to generate QnA from.
+        Returns: dict: A list of dictionary containing the generated QnA.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            if card["user_id"] !=  ObjectId(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+            
+            qna = card.get("qna")
+            if not qna:
+                qna = gemini_text_processor.generate_qna(card["summary"])
+                update_card = knowledge_card_dao.update_qna(card_id=card_id, qna=qna)
+                return qna
+            else:
+                return qna
+        
+        except Exception as exception:
+            print(f"Error generating QnA: {exception}")
+            return None
+        
+    def get_knowledge_map(self, card_id: str):
+        """
+        Usage: Generate a knowledge map for a specific card.
+        Parameters: card_id (str): The ID of the card to generate the knowledge map for.
+        Returns: dict: A dictionary containing the generated knowledge map.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            
+            knowledge_map = gemini_text_processor.generate_knowledge_map(card["summary"])
+            update_card = knowledge_card_dao.update_map(card_id=card_id, knowledge_map=knowledge_map)
+
+            return knowledge_map
+        
+        except Exception as exception:
+            print(f"Error generating knowledge map: {exception}")
+            return None

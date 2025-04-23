@@ -175,6 +175,7 @@ class KnowledgeCardDao:
         Returns: Knowledge card document or None
         """
         try:
+            print("reached in get_card_by_id")
             card_id = ObjectId(card_id)
             result = self.knowledge_cards_collection.find_one({"_id": card_id})
             return result
@@ -315,6 +316,34 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occured: {exception}")
             return "failed to generate shareable LINK"
+        
+    def update_qna(self, card_id: str, qna: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "qna": qna
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update qna"
+        
+    def update_map(self, card_id: str, knowledge_map: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "knowledge_map": knowledge_map
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update map"
     
     def get_card_by_token(self, token: str):
         try:

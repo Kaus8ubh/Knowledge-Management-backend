@@ -93,6 +93,6 @@ class UserDAO:
         Return: None
         """
         try:
-            self.users_collection.update_one({"_id": ObjectId(user_id)}, {"$pull": {"bookmarked_cards": card_id}})
+            return self.users_collection.update_one({"_id": ObjectId(user_id)}, {"$pull": {"bookmarked_cards": card_id}})
         except OperationFailure as operation_failure:
             raise DatabaseError("Couldn't remove bookmarked card.", 500) from operation_failure
