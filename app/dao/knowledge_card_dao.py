@@ -175,6 +175,7 @@ class KnowledgeCardDao:
         Returns: Knowledge card document or None
         """
         try:
+            print("reached in get_card_by_id")
             card_id = ObjectId(card_id)
             result = self.knowledge_cards_collection.find_one({"_id": card_id})
             return result

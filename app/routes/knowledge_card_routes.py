@@ -150,6 +150,7 @@ async def toggle_bookmark_card(card_id:str, user_id: str):
 async def get_bookmarked_cards(user_id: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all bookmarked cards"""
     try:
+        print(user_id, skip, limit)
         return knowledge_card_service.get_bookmarked_cards(user_id=user_id, skip=skip, limit=limit)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))

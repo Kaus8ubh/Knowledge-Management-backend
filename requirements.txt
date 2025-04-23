@@ -24,3 +24,4 @@ fpdf==1.7.2
 markdown
 PyPDF2
 python-multipart
+weasyprint

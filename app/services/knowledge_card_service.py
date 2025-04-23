@@ -517,11 +517,12 @@ class KnowledgeCardService:
             card = knowledge_card_dao.get_card_by_id(card_id=card_id)
             user = user_dao.get_user_by_id(user_id=user_id)
             if not user:
-                return None
+                return JSONResponse(status_code=404, content={"message": "User not found"})
             if not card or not card.get("public", False):
-                return None  
+                return JSONResponse(status_code=404, content={"message": "Card not found"})  
     
             if user_id in card.get("bookmarked_by", []):
+                print("unbookmarking")
                 update_card = knowledge_card_dao.unbookmark_a_card(
                     card_id=card_id,
                     user_id=user_id
@@ -543,14 +544,7 @@ class KnowledgeCardService:
                 user_id=user_id,
                 card_id=card_id
             )
-            if update_card:
-                print("card updated")
-            else:
-                print("card not updated")
-            if update_user:
-                print("user updated")
-            else:
-                print("user not updated")
+    
             if update_card and update_user:
                 return JSONResponse(status_code=200, content={"message": "Card bookmarked successfully"})
             else:
@@ -567,21 +561,26 @@ class KnowledgeCardService:
         Returns: list: A list of bookmarked cards.
         """
         try:
+            print("getting bookmarked cards")
             user = user_dao.get_user_by_id(user_id=user_id)
             if not user:
-                return None
+                print("user not found")
+                return []
             
             bookmarked_cards = user.get("bookmarked_cards", [])
             if not bookmarked_cards:
-                return None
+                print("no bookmarked cards")
+                return []
             
             paginated_bookmarked_cards = bookmarked_cards[skip:skip + limit]
 
             result = []
-            for card in paginated_bookmarked_cards:
-                card_data = knowledge_card_dao.get_card_by_id(card_id=card)
+            for card_id in paginated_bookmarked_cards:
+                card_data = knowledge_card_dao.get_card_by_id(card_id=card_id)
                 if card_data:
-                    result.append(card_data)
+                    # Normalize _id to card_id
+                    card_data["card_id"] = str(card_data["_id"])
+                    result.append(card_data)                  
             
             # Check if we need to fetch more cards
             if len(paginated_bookmarked_cards) == limit:
