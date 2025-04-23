@@ -556,7 +556,7 @@ class KnowledgeCardService:
             print(f"error while bookmarking the card: {exception}")
             return None
         
-    def get_bookmarked_cards(self, user_id: str):
+    def get_bookmarked_cards(self, user_id: str, skip: int = 0, limit: int = 4):
         """
         Usage: Get all bookmarked cards for a user.
         Parameters: user_id (str): The ID of the user whose bookmarked cards are to be retrieved.
@@ -570,11 +570,19 @@ class KnowledgeCardService:
             bookmarked_cards = user.get("bookmarked_cards", [])
             if not bookmarked_cards:
                 return None
+            
+            paginated_bookmarked_cards = bookmarked_cards[skip:skip + limit]
+
             result = []
-            for card in bookmarked_cards:
+            for card in paginated_bookmarked_cards:
                 card_data = knowledge_card_dao.get_card_by_id(card_id=card)
                 if card_data:
                     result.append(card_data)
+            
+            # Check if we need to fetch more cards
+            if len(paginated_bookmarked_cards) == limit:
+                # Recursively fetch the next batch of cards
+                result += self.get_bookmarked_cards(user_id, skip + limit, limit)
 
             return jsonable_encoder(result, custom_encoder={ObjectId: str})
         
