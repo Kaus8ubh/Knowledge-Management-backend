@@ -91,6 +91,7 @@ class KnowledgeCardService:
             for card in cards:
                 card_dist = card.dict()
                 card_dist["liked_by_me"] = user_id in (card_dist.get("liked_by") or [])
+                card_dist["bookmarked_by_me"] = user_id in (card_dist.get("bookmarked_by") or [])
                 result.append(card_dist)
             
             return result
@@ -121,11 +122,12 @@ class KnowledgeCardService:
 
             if source_url:
                 if is_youtube_url(source_url):
-                    yt_transcript = get_yt_transcript_text(source_url)
+                    content = get_yt_transcript_text(source_url)
                     print("transcript done")
-                    if not yt_transcript:
+                    print(content)
+                    if not content:
                         return None
-                    chunks = scraper.split_content(yt_transcript)
+                    chunks = scraper.split_content(content)
                 else:
                     # Scrape content from the given URL
                     content = scraper.scrape_web(source_url)
@@ -135,6 +137,8 @@ class KnowledgeCardService:
                     body_content = scraper.extract_body_content(content)
                     print("body done")
                     cleaned_content = scraper.clean_body_content(body_content)
+                    print("cleaned done")
+                    print(cleaned_content)
                     chunks = scraper.split_content(cleaned_content)
                     
                 summary = gemini_text_processor.summarize_text(chunks)
@@ -580,4 +584,51 @@ class KnowledgeCardService:
         
         except Exception as exception:
             print(f"Error getting bookmarked cards: {exception}")
+            return None
+        
+    def generate_qna(self, card_id: str, user_id: str ):
+        """
+        Usage: Generate QnA from a knowledge card.
+        Parameters: card_id (str): The ID of the card to generate QnA from.
+        Returns: dict: A list of dictionary containing the generated QnA.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            if card["user_id"] !=  ObjectId(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+            
+            qna = card.get("qna")
+            if not qna:
+                qna = gemini_text_processor.generate_qna(card["summary"])
+                update_card = knowledge_card_dao.update_qna(card_id=card_id, qna=qna)
+                return qna
+            else:
+                return qna
+        
+        except Exception as exception:
+            print(f"Error generating QnA: {exception}")
+            return None
+        
+    def get_knowledge_map(self, card_id: str):
+        """
+        Usage: Generate a knowledge map for a specific card.
+        Parameters: card_id (str): The ID of the card to generate the knowledge map for.
+        Returns: dict: A dictionary containing the generated knowledge map.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            
+            knowledge_map = gemini_text_processor.generate_knowledge_map(card["summary"])
+            update_card = knowledge_card_dao.update_map(card_id=card_id, knowledge_map=knowledge_map)
+
+            return knowledge_map
+        
+        except Exception as exception:
+            print(f"Error generating knowledge map: {exception}")
             return None

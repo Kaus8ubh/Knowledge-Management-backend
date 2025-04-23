@@ -315,6 +315,34 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occured: {exception}")
             return "failed to generate shareable LINK"
+        
+    def update_qna(self, card_id: str, qna: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "qna": qna
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update qna"
+        
+    def update_map(self, card_id: str, knowledge_map: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "knowledge_map": knowledge_map
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update map"
     
     def get_card_by_token(self, token: str):
         try:

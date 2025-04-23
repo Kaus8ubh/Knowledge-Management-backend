@@ -21,5 +21,8 @@ def to_knowledge_card(card) -> KnowledgeCard:
         likes=card.get("likes", 0),
         liked_by=card.get("liked_by") or [],
         copied_by=card.get("copied_by") or [],
-        copied_from=str(card.get("copied_from")) if card.get("copied_from") else None
+        copied_from=str(card.get("copied_from")) if card.get("copied_from") else None,
+        bookmarked_by=card.get("bookmarked_by") or [],
+        qna=card.get("qna") or [],
+        knowledge_map=card.get("knowledge_map") or []
     )

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
-from typing import List, Optional
+from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
 from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
 from services import knowledge_card_service
@@ -151,5 +151,21 @@ async def get_bookmarked_cards(user_id: str):
     """API endpoint to get all bookmarked cards"""
     try:
         return knowledge_card_service.get_bookmarked_cards(user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.post("/{card_id}/generate-qna", response_model=List[Dict[str, str]])
+async def generate_qna(card_id: str, user_id: str):
+    """API endpoint to generate QnA from shared data"""
+    try:
+        return knowledge_card_service.generate_qna(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/{card_id}/knowledge-map")
+async def get_knowledge_map(card_id: str):
+    """API endpoint to get knowledge map of a card"""
+    try:
+        return knowledge_card_service.get_knowledge_map(card_id=card_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
