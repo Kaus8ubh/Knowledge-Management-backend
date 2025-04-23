@@ -67,13 +67,13 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
 
-    def get_all_public_cards(self):
+    def get_all_public_cards(self, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all public knowledge cards.
         Returns: list: A list of public knowledge cards.
         """
         try:
-            cards = self.knowledge_cards_collection.find({"public": True})
+            cards = self.knowledge_cards_collection.find({"public": True}).sort("created_at", -1).skip(skip).limit(limit)
             return [
                 to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
                 for card in cards
@@ -370,4 +370,18 @@ class KnowledgeCardDao:
             )
         except Exception as exception:
             print(f"Error while unbookmarking the card: {exception}")
+            return None
+        
+    def update_card_category_in_db(self, card_id: str, category: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$set": {"category": category}},
+                return_document=True
+            )
+            if result:
+                return result.get("category", "")
+            return None
+        except Exception as e:
+            print(f"Error updating category: {e}")
             return None

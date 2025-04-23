@@ -78,14 +78,14 @@ class KnowledgeCardService:
             print(f"Error getting archive knowledge cards: {exception}")
             return None
         
-    def get_public_cards(self, user_id: str):
+    def get_public_cards(self, user_id: str, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve archive knowledge cards for a specific user.
         Parameters: token (str): The access token of the user whose cards are to be retrieved.
         Returns: list: A list of public knowledge cards.
         """
         try:
-            cards = knowledge_card_dao.get_all_public_cards()
+            cards = knowledge_card_dao.get_all_public_cards(skip, limit)
               
             result = []
             for card in cards:
@@ -556,7 +556,7 @@ class KnowledgeCardService:
             print(f"error while bookmarking the card: {exception}")
             return None
         
-    def get_bookmarked_cards(self, user_id: str):
+    def get_bookmarked_cards(self, user_id: str, skip: int = 0, limit: int = 4):
         """
         Usage: Get all bookmarked cards for a user.
         Parameters: user_id (str): The ID of the user whose bookmarked cards are to be retrieved.
@@ -570,14 +570,25 @@ class KnowledgeCardService:
             bookmarked_cards = user.get("bookmarked_cards", [])
             if not bookmarked_cards:
                 return None
+            
+            paginated_bookmarked_cards = bookmarked_cards[skip:skip + limit]
+
             result = []
-            for card in bookmarked_cards:
+            for card in paginated_bookmarked_cards:
                 card_data = knowledge_card_dao.get_card_by_id(card_id=card)
                 if card_data:
                     result.append(card_data)
+            
+            # Check if we need to fetch more cards
+            if len(paginated_bookmarked_cards) == limit:
+                # Recursively fetch the next batch of cards
+                result += self.get_bookmarked_cards(user_id, skip + limit, limit)
 
             return jsonable_encoder(result, custom_encoder={ObjectId: str})
         
         except Exception as exception:
             print(f"Error getting bookmarked cards: {exception}")
             return None
+        
+    def update_card_category(self, card_id: str, category: str):
+        return knowledge_card_dao.update_card_category_in_db(card_id, category)

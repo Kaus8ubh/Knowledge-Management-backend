@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
 from typing import List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel
 from services import knowledge_card_service
 
 knowledge_card_router = APIRouter()
@@ -26,9 +26,9 @@ async def get_archive_card(token: str, skip: int = 0, limit: int = 4):
     return archive_cards
 
 @knowledge_card_router.get("/public", response_model=List[PublicKnowledgeCard])
-async def get_public_card(user_id: str):
+async def get_public_card(user_id: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all public cards"""
-    public_cards = knowledge_card_service.get_public_cards(user_id=user_id)
+    public_cards = knowledge_card_service.get_public_cards(user_id=user_id, skip=skip, limit=limit)
     return public_cards
 
 @knowledge_card_router.post("/")
@@ -147,9 +147,16 @@ async def toggle_bookmark_card(card_id:str, user_id: str):
         raise HTTPException(status_code=400, detail=str(exception))
     
 @knowledge_card_router.get("/bookmarked")
-async def get_bookmarked_cards(user_id: str):
+async def get_bookmarked_cards(user_id: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all bookmarked cards"""
     try:
-        return knowledge_card_service.get_bookmarked_cards(user_id=user_id)
+        return knowledge_card_service.get_bookmarked_cards(user_id=user_id, skip=skip, limit=limit)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/update-category")
+async def update_category(card_id: str, payload: UpdateCategoryModel):
+    updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
+    if updated_card:
+        return updated_card
+    raise HTTPException(status_code=404, detail="Card not found")
