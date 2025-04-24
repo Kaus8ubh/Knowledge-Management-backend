@@ -22,3 +22,7 @@ youtube-transcript-api
 python-docx==0.8.11
 fpdf==1.7.2
 markdown
+PyPDF2
+python-multipart
+weasyprint
+html2docx

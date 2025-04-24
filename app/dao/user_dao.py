@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from database import db_instance
 from pymongo.errors import ConnectionFailure, OperationFailure, PyMongoError
 from utils import DatabaseError, NotFoundError
+from bson import ObjectId
 
 class UserDAO:
 
@@ -32,6 +33,19 @@ class UserDAO:
             return existing_user
         except OperationFailure as operation_failure:
             raise DatabaseError("Failed to fetch user from database.", 500) from operation_failure
+        
+    def get_user_by_id(self, user_id: str):
+        """
+        Usage: Get a user by ID
+        Parameter: user_id: The user ID to get
+        Returns: User document or None
+        """
+        try:
+            user_id = ObjectId(user_id)
+            return self.users_collection.find_one({"_id": user_id})
+        except Exception as exception:
+            print(f"Error getting user: {exception}")
+            return None
     
     
     def update_existing_user_last_login(self, email: str):
@@ -61,3 +75,24 @@ class UserDAO:
             print("Error creating user: ", error)
             raise HTTPException(status_code=500, detail={"message": "Error creating user"})
         
+    def add_bookmarked_card(self, user_id: str, card_id: str):
+        """
+        Usage: This function is used to add a bookmarked card to the user's bookmarks
+        Params: user_id str, card_id str
+        Return: None
+        """
+        try:
+            return self.users_collection.update_one({"_id": ObjectId(user_id)}, {"$addToSet": {"bookmarked_cards": card_id}})
+        except OperationFailure as operation_failure:
+            raise DatabaseError("Couldn't add bookmarked card.", 500) from operation_failure
+        
+    def remove_bookmarked_card(self, user_id: str, card_id: str):
+        """
+        Usage: This function is used to remove a bookmarked card from the user's bookmarks
+        Params: user_id str, card_id str
+        Return: None
+        """
+        try:
+            return self.users_collection.update_one({"_id": ObjectId(user_id)}, {"$pull": {"bookmarked_cards": card_id}})
+        except OperationFailure as operation_failure:
+            raise DatabaseError("Couldn't remove bookmarked card.", 500) from operation_failure

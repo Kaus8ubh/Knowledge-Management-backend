@@ -1,3 +1,4 @@
+import json
 import google.generativeai as genai
 import re
 from config import Config
@@ -75,32 +76,42 @@ class TextProcessingWithGemini:
 
                 # Generate a refined summary in a structured format
                 response = client.generate_content(f"""
-                        You are provided with a collection of documents that together form a single comprehensive document. 
-                        A researcher needs a summary that is rich and self-contained, so they can understand the full scope without reading the original sources.
+                            You are provided with a collection of documents that together form a single comprehensive document.
+                            A researcher needs a summary that is informative, clear, and structured in a visually engaging format using emojis and headings. Your task is to generate a rich, self-contained summary that does not require the reader to refer back to the original documents.
 
-                        Your task is to generate a structured summary with expanded, informative sections:
+                            **Required Output Format:**
 
-                        **Format:**
-                        - **Introduction**: Provide a clear and concise overview of what the document is about, its objective, and its context.
-                        
-                        - **Key Highlights**:
-                            • List each core idea, concept, method, or insight in separate bullet points.
-                            • For each point, include 2–4 sentences explaining the idea in enough detail so that the reader can grasp the full meaning without needing to refer to the original article.
-                            • If any processes, steps, methods, or frameworks are described in the content, explain them clearly and thoroughly.
-                            • Use examples or brief elaborations when they help clarify the point.
+                            **Summary**  
+                            Write a concise 1–2 sentence overview that clearly explains what the document is about, its main focus, and what the reader will learn.
 
-                        - **Conclusion**: Summarize the key takeaway, implications, or suggested next steps, if applicable.
+                            **Highlights**  
+                            List the most important features, concepts, or components using bullet points with relevant emojis.  
+                            Each bullet should be 1-2 sentence long and written in a simple, clear style.
 
-                        **Guidelines:**
-                        - Avoid promotional or decorative language.
-                        - Maintain an informative and research-friendly tone.
-                        - Ensure the summary is useful and comprehensive enough to stand on its own.
-                        - Do not add any introductory or contextual phrases like "Here’s a structured summary of..." just begin summarizing the content directly.
+                            Example format:  
+                            🌐 Domain and Hosting: Acquire a domain name and hosting for your website.
 
-                        Summarize the following document:
+                            **Key Insights**  
+                            Provide an expanded explanation of the core ideas or methods introduced in the content.  
+                            Each bullet point should start with an emoji and bolded heading, followed by 2–4 explanatory sentences.  
+                            If any processes, frameworks, or systems are described, explain them clearly.  
+                            Use examples when they help make the concept easier to understand.
 
-                        {combined_summary}
-                    """)
+                            Example format:  
+                            🌍 **Understanding Domain and Hosting**: A domain is your website’s address, while hosting is the service that stores your site files. Both are essential for getting your site online. Choosing the right provider ensures good performance and security.
+
+                            **Guidelines:**  
+                            - Use emojis to help structure and clarify the content visually.  
+                            - Maintain a professional but friendly and educational tone.  
+                            - Avoid promotional language.  
+                            - Do not include extra preamble like “Here’s the summary…” — just present the sections directly.  
+                            - Ensure the summary is self-contained and stands alone.
+
+                            Summarize the following document in this format:
+
+                            {combined_summary}
+
+                        """)
 
 
                 final_summary = self.extract_text_from_response(response)
@@ -187,3 +198,116 @@ class TextProcessingWithGemini:
         except Exception as exception:
             print(f"Error generating category: {exception}")
             return None
+        
+    def generate_qna(self, content):
+        """
+        Usage: Generate a Q&A format from the provided content.
+        Parameters:
+            content (str): The content for which Q&A is to be generated.
+        Returns:
+            str: A Q&A format based on the content.
+        """
+        try:
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            response = client.generate_content(f"""
+                        You are an expert content summarizer and educator. From the following content, extract valuable knowledge and generate **detailed and explanatory Q&A pairs** suitable for someone trying to learn or revise the topic deeply.
+
+                        ### Instructions:
+                        1. Each question should be insightful and encourage understanding.
+                        2. Each answer should be descriptive, ideally 2–5 sentences, and include examples or explanations if applicable.
+                        3. Avoid list-only or single-line answers unless absolutely necessary.
+                        4. Ensure clarity, context, and educational value in each Q&A.
+                        5. Provide at least 5 meaningful Q&A pairs.
+
+                        Content:
+                        \"\"\"
+                        {content}
+                        \"\"\"
+                        Format the output as a list of questions and answers.
+
+                        No headers, no markdown, just plain text format.
+                    """)
+
+            raw_qna_text = self.extract_text_from_response(response)
+
+            qna_list = self.parse_qna_to_list(raw_qna_text)
+            return qna_list
+        except Exception as exception:
+            print(f"Error generating Q&A: {exception}")
+            return None
+
+    def parse_qna_to_list(self, text):
+        """
+            Converts raw Q&A text into a structured list of Q&A dictionaries.        
+        """
+        pattern = re.compile(r"Q:\s*(.*?)\nA:\s*(.*?)(?=\nQ:|\Z)", re.DOTALL)
+        matches = pattern.findall(text)
+
+        qna_list = [{"question": q.strip(), "answer": a.strip()} for q, a in matches]
+        return qna_list
+
+    def generate_knowledge_map(self, content):
+        """
+        Usage: Generate a knowledge map from the provided content.
+        Parameters:
+            content (str): The content for which the knowledge map is to be generated.
+        Returns:
+            str: A knowledge map based on the content.
+        """
+        try:
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            response = client.generate_content(f"""
+                            I have the following summary of a topic:
+                            {content}
+                            Based on this summary, generate a detailed, beginner-friendly Knowledge Map in JSON format, structured like a learning guide.
+                            Output JSON with this format:
+                                {{   
+                                    "knowledgeMap": [
+                                        {{
+                                        "section": "Prerequisite Topics",
+                                        "icon": "📘",
+                                        "items": [
+                                            {{
+                                            "topic": "Linear Algebra",
+                                            "description": "Understand vectors and matrices, essential for neural network computations.",
+                                            "difficulty": "🟡 Intermediate"
+                                            }},
+                                            ...
+                                        ]
+                                        }},
+                                        ...
+                                    ]
+                                    }}
+                            The sections should be: 📘 Prerequisite Topics, 🔍 Core Concepts, 🔗 Related Concepts, 🧰 Supplementary Topics, 🌐 Adjacent Areas
+
+                            Each item should include:
+                                topic (name of the concept)
+                                description (brief explanation in beginner-friendly language)
+                                difficulty (use one of: 🟢 Beginner, 🟡 Intermediate, 🔴 Advanced)
+                    """)
+
+            raw_knowledge_map = self.extract_text_from_response(response)
+            knowledge_map = self.extract_knowledge_map(raw_knowledge_map)
+            # Unwrap the "knowledgeMap" key safely
+            if isinstance(knowledge_map, dict) and "knowledgeMap" in knowledge_map:
+                return knowledge_map["knowledgeMap"]
+            else:
+                print("Unexpected knowledge_map format:", knowledge_map)
+                return []
+        except Exception as exception:
+            print(f"Error generating knowledge map: {exception}")
+            return None
+        
+    def extract_knowledge_map(self, raw_response: str):
+        """
+        Extracts clean JSON from a model response wrapped in a code block.
+        """
+        try:
+            cleaned = re.sub(r'^```json\s*|\s*```$', '', raw_response.strip())
+            # Convert to dictionary
+            return json.loads(cleaned)
+        
+        except Exception as exception:
+            return {"error": f"Failed to parse knowledge map: {str(exception)}"}

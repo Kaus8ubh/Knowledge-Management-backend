@@ -67,13 +67,13 @@ class KnowledgeCardDao:
             print(f"An error occurred: {exception}")
             return None
 
-    def get_all_public_cards(self):
+    def get_all_public_cards(self, skip: int = 0, limit: int = 4):
         """
         Usage: Retrieve all public knowledge cards.
         Returns: list: A list of public knowledge cards.
         """
         try:
-            cards = self.knowledge_cards_collection.find({"public": True})
+            cards = self.knowledge_cards_collection.find({"public": True}).sort("created_at", -1).skip(skip).limit(limit)
             return [
                 to_knowledge_card(card)  # Convert each card to a KnowledgeCard object
                 for card in cards
@@ -175,8 +175,10 @@ class KnowledgeCardDao:
         Returns: Knowledge card document or None
         """
         try:
+            print("reached in get_card_by_id")
             card_id = ObjectId(card_id)
-            return self.knowledge_cards_collection.find_one({"_id": card_id})
+            result = self.knowledge_cards_collection.find_one({"_id": card_id})
+            return result
         except Exception as exception:
             print(f"Error getting card: {exception}")
             return None
@@ -314,6 +316,34 @@ class KnowledgeCardDao:
         except Exception as exception:
             print(f"An error occured: {exception}")
             return "failed to generate shareable LINK"
+        
+    def update_qna(self, card_id: str, qna: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "qna": qna
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update qna"
+        
+    def update_map(self, card_id: str, knowledge_map: dict):
+        try:
+            result = self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$set": {
+                    "knowledge_map": knowledge_map
+                    }
+                }
+            )
+            return result.modified_count > 0
+        except Exception as exception:
+            print(f"An error occured: {exception}")
+            return "failed to update map"
     
     def get_card_by_token(self, token: str):
         try:
@@ -346,3 +376,41 @@ class KnowledgeCardDao:
             )
         except Exception as exception:
             print(f"Error while unliking the card: {exception}")
+
+    def bookmark_a_card(self, card_id: str, user_id: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$addToSet": {
+                    "bookmarked_by": user_id
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while bookmarking the card: {exception}")
+            return None
+        
+    def unbookmark_a_card(self, card_id: str, user_id: str):
+        try:
+            return self.knowledge_cards_collection.update_one(
+                {"_id": ObjectId(card_id)},
+                {"$pull": {
+                    "bookmarked_by": user_id
+                }}
+            )
+        except Exception as exception:
+            print(f"Error while unbookmarking the card: {exception}")
+            return None
+        
+    def update_card_category_in_db(self, card_id: str, category: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$set": {"category": category}},
+                return_document=True
+            )
+            if result:
+                return result.get("category", "")
+            return None
+        except Exception as e:
+            print(f"Error updating category: {e}")
+            return None

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List
+from fastapi import UploadFile, File, Form
+from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel
 from services import knowledge_card_service
 
 knowledge_card_router = APIRouter()
@@ -25,9 +26,9 @@ async def get_archive_card(token: str, skip: int = 0, limit: int = 4):
     return archive_cards
 
 @knowledge_card_router.get("/public", response_model=List[PublicKnowledgeCard])
-async def get_public_card(user_id: str):
+async def get_public_card(user_id: str, skip: int = 0, limit: int = 4):
     """API endpoint to get all public cards"""
-    public_cards = knowledge_card_service.get_public_cards(user_id=user_id)
+    public_cards = knowledge_card_service.get_public_cards(user_id=user_id, skip=skip, limit=limit)
     return public_cards
 
 @knowledge_card_router.post("/")
@@ -37,6 +38,19 @@ async def add_knowledge_card(knowledge_card_data:KnowledgeCardRequest):
 
     if not new_card:
         raise HTTPException(status_code=400, detail="Failed to process knowledge card")
+    return new_card
+
+@knowledge_card_router.post("/upload-file")
+async def add_knowledge_card_from_file(
+        token: str = Form(...),
+        note: Optional[str] = Form(""),
+        file: UploadFile = File(...)
+        ):
+    """API endpoint to add knowledge card from a file (pdf/docx)"""
+    new_card = await knowledge_card_service.process_file_for_kc(token=token, file=file, note=note)
+
+    if not new_card:
+        raise HTTPException(status_code=400, detail="Failed to process knowledge card from file")
     return new_card
 
 @knowledge_card_router.put("/")
@@ -96,7 +110,9 @@ async def delete_card(card_id:str, user_id: str):
 @knowledge_card_router.post("/{card_id}/generate-share-link")
 async def generate_share_link(card_id: str, user_id: str):
     try:
-        return {"share_url": knowledge_card_service.generate_share_link(card_id=card_id, user_id=user_id)}
+        result = {"share_url": knowledge_card_service.generate_share_link(card_id=card_id, user_id=user_id)}
+        print(result)
+        return JSONResponse(content=result, status_code=200)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
@@ -119,5 +135,45 @@ async def like_a_card(card_id: str, user_id: str):
 async def copy_card(card_id: str, user_id: str):
     try:
         return knowledge_card_service.copy_card(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/bookmark")
+async def toggle_bookmark_card(card_id:str, user_id: str):
+    """API endpoint to bookmark public card"""
+    try:
+        return knowledge_card_service.toggle_bookmark_card(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/bookmarked")
+async def get_bookmarked_cards(user_id: str, skip: int = 0, limit: int = 4):
+    """API endpoint to get all bookmarked cards"""
+    try:
+        print(user_id, skip, limit)
+        return knowledge_card_service.get_bookmarked_cards(user_id=user_id, skip=skip, limit=limit)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/update-category")
+async def update_category(card_id: str, payload: UpdateCategoryModel):
+    updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
+    if updated_card:
+        return updated_card
+    raise HTTPException(status_code=404, detail="Card not found")
+    
+@knowledge_card_router.post("/{card_id}/generate-qna", response_model=List[Dict[str, str]])
+async def generate_qna(card_id: str, user_id: str):
+    """API endpoint to generate QnA from shared data"""
+    try:
+        return knowledge_card_service.generate_qna(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/{card_id}/knowledge-map")
+async def get_knowledge_map(card_id: str):
+    """API endpoint to get knowledge map of a card"""
+    try:
+        return knowledge_card_service.get_knowledge_map(card_id=card_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))

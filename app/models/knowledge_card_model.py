@@ -22,6 +22,9 @@ class KnowledgeCard(BaseModel):
     liked_by:Optional[list]=[]
     copied_by:Optional[list]=[]
     copied_from: Optional[str] = None
+    bookmarked_by: Optional[list] = []
+    qna: Optional[list] = []  
+    knowledge_map: Optional[list] = []
 
 class PublicKnowledgeCard(KnowledgeCard):
     liked_by_me: bool = False
@@ -36,3 +39,6 @@ class EditKnowledgeCard(BaseModel):
     user_id: str
     summary: Optional[str]
     note: Optional[str]
+
+class UpdateCategoryModel(BaseModel):
+    category: str
