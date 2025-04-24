@@ -11,7 +11,7 @@ class KnowledgeCard(BaseModel):
     note: Optional[str]
     created_at: datetime
     embedded_vector: Optional[list]
-    source_url: Optional[str]
+    source_url: Optional[str] = None
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
