@@ -215,10 +215,10 @@ class KnowledgeCardService:
             elif suffix == "docx":
                 text = extract_text_from_docx(temp_path)
             else:
-                os.remove(temp_path)  # Clean up the temporary file
+                os.remove(temp_path)  # Clean up temporary file
                 return {"error": "unsupported file type"}
 
-            os.remove(temp_path)  # Clean up the temporary file
+            os.remove(temp_path)  # Clean up temporary file
 
             # Text processing pipeline
             chunks = scraper.split_content(text)
@@ -226,7 +226,7 @@ class KnowledgeCardService:
             title = gemini_text_processor.get_title(summary)
             tags = gemini_text_processor.generate_tags(summary)
             category = gemini_text_processor.generate_category(summary)
-            embedding = []  # Placeholder for embedding (if you plan to integrate later)
+            embedding = []  
 
             markup_summary = convert_summary_to_html(summary)
             created_at = datetime.utcnow().isoformat()
@@ -243,7 +243,7 @@ class KnowledgeCardService:
                 note=final_note,
                 created_at=created_at,
                 embedded_vector=embedding,
-                source_url="",  # No URL for files
+                source_url= None, 
                 thumbnail=thumbnail,
                 favourite=False,
                 archive=False,
