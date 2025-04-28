@@ -3,7 +3,7 @@ from fastapi import UploadFile, File, Form
 from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
 from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel
-from services import knowledge_card_service
+from services import knowledge_card_service, category_service
 
 knowledge_card_router = APIRouter()
 
@@ -154,7 +154,16 @@ async def get_bookmarked_cards(user_id: str, skip: int = 0, limit: int = 4):
         return knowledge_card_service.get_bookmarked_cards(user_id=user_id, skip=skip, limit=limit)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
-    
+
+@knowledge_card_router.get("/categories")
+async def get_all_categories():
+    """API endpoint to get all categories"""
+    try:
+        categories = category_service.get_available_categories()
+        return {"categories": categories}
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+       
 @knowledge_card_router.put("/{card_id}/update-category")
 async def update_category(card_id: str, payload: UpdateCategoryModel):
     updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
