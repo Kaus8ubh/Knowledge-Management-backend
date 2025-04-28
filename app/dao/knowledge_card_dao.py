@@ -405,7 +405,7 @@ class KnowledgeCardDao:
         try:
             result = self.knowledge_cards_collection.find_one_and_update(
                 {"_id": ObjectId(card_id)},
-                {"$set": {"category": category}},
+                {"$addToSet": {"category": category}},
                 return_document=True
             )
             if result:

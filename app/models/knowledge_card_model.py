@@ -15,7 +15,7 @@ class KnowledgeCard(BaseModel):
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
-    category: Optional[str]
+    category: Optional[list]
     shared_token: Optional[str]=None
     public: Optional[bool]=False
     likes: Optional[int]=0
