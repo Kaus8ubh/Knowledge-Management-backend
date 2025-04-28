@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse
 from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
 from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from dao import knowledge_card_dao, card_cluster_dao, user_dao
-from services.card_cluster_service import ClusteringServices
 from fastapi.responses import JSONResponse  
 from datetime import datetime
 import io
@@ -19,6 +18,10 @@ from html2docx import html2docx
 
 
 class KnowledgeCardService:
+
+    def __init__(self):
+        from services import CategoryService 
+        self.category_service = CategoryService()
 
     def get_all_cards(self, token: str, skip: int = 0, limit: int = 4):
         """
@@ -597,8 +600,12 @@ class KnowledgeCardService:
             return None
         
     def update_card_category(self, card_id: str, category: str):
+        # ensure category exists
+        self.category_service.add_category_if_not_exists(category, created_by="system") 
+
+        # update card
         return knowledge_card_dao.update_card_category_in_db(card_id, category)
-        
+    
     def generate_qna(self, card_id: str, user_id: str ):
         """
         Usage: Generate QnA from a knowledge card.
