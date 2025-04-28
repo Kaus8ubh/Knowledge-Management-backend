@@ -652,3 +652,27 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error generating knowledge map: {exception}")
             return None
+        
+    def add_tag(self, card_id: str, tag: str):
+        """
+        Usage: Add a tag to a specific card.
+        Parameters: card_id (str): The ID of the card to add the tag to.
+        Returns: dict: A dictionary containing the updated card data.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            
+            tags = card.get("tags", [])
+            if tag not in tags:
+                update_card = knowledge_card_dao.update_tags(card_id=card_id, tag=tag)
+
+                return update_card
+            else:
+                return {"message": "Tag already exists."}
+        
+        except Exception as exception:
+            print(f"Error adding tag: {exception}")
+            return None

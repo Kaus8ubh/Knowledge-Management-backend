@@ -42,3 +42,6 @@ class EditKnowledgeCard(BaseModel):
 
 class UpdateCategoryModel(BaseModel):
     category: str
+
+class AddtagModel(BaseModel):
+    tag: str
