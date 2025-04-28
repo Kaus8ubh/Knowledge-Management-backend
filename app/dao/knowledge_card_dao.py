@@ -414,3 +414,18 @@ class KnowledgeCardDao:
         except Exception as e:
             print(f"Error updating category: {e}")
             return None
+        
+    def update_tags(self, card_id: str, tag: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$addToSet": {"tags": tag}},
+                return_document=True
+            )
+            if result:
+                return result.get("tags", [])
+            return None
+        except Exception as e:
+            print(f"Error adding tag: {e}")
+            return None
+        
