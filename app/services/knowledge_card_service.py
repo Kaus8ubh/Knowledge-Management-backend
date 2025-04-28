@@ -154,9 +154,11 @@ class KnowledgeCardService:
                 print("title done")
                 # extract tags from suummary
                 tags = gemini_text_processor.generate_tags(summary)
-                print("tags done")
+                print("tags done", tags)
+                categories = []
                 category = gemini_text_processor.generate_category(summary)
-                print("category done: " + category)
+                categories.append(category)
+                print("category done: ", category)
                 # embedding = embedder_for_title.embed_text(title)
                 embedding = []
                 print("embedding done")
@@ -167,7 +169,7 @@ class KnowledgeCardService:
                 tags=[]
                 embedding=[]
                 source_url=""
-                category="Misc"
+                category=[]
 
             thumbnail = get_thumbnail(category=category)
             markup_summary = convert_summary_to_html(summary_text=summary)
@@ -185,7 +187,7 @@ class KnowledgeCardService:
                                  thumbnail=thumbnail,
                                  favourite=False,
                                  archive=False,
-                                 category=category)
+                                 category=categories)
             
             new_card = knowledge_card_dao.insert_knowledge_card(card=card)
 
