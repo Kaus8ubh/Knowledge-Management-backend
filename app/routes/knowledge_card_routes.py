@@ -188,8 +188,11 @@ async def get_knowledge_map(card_id: str):
         raise HTTPException(status_code=400, detail=str(exception))
     
 @knowledge_card_router.put("/{card_id}/add-tag")
-async def add_tag(card_id: str, payload: AddtagModel):
-    updated_card =knowledge_card_service.add_tag(card_id, payload.tag)
-    if updated_card:
-        return updated_card
-    raise HTTPException(status_code=404, detail="Card not found")
+async def add_tag(card_id: str, user_id: str, payload: AddtagModel):
+    response = knowledge_card_service.add_tag(card_id, user_id, payload.tag)
+    return response
+
+@knowledge_card_router.delete("/{card_id}/remove-tag")
+async def remove_tag(card_id: str, user_id: str, payload: AddtagModel):
+    response = knowledge_card_service.remove_tag(card_id, user_id, payload.tag)
+    return response

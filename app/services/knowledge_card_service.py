@@ -655,26 +655,60 @@ class KnowledgeCardService:
             print(f"Error generating knowledge map: {exception}")
             return None
         
-    def add_tag(self, card_id: str, tag: str):
+    def add_tag(self, card_id: str, user_id: str, tag: str):
         """
-        Usage: Add a tag to a specific card.
-        Parameters: card_id (str): The ID of the card to add the tag to.
-        Returns: dict: A dictionary containing the updated card data.
+        Add a tag to a specific card.
         """
         try:
             card = knowledge_card_dao.get_card_by_id(card_id=card_id)
             
             if not card:
                 raise HTTPException(status_code=404, detail="Card not found.")
-            
+
+            if str(card["user_id"]) != str(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+
             tags = card.get("tags", [])
             if tag not in tags:
-                update_card = knowledge_card_dao.update_tags(card_id=card_id, tag=tag)
-
-                return update_card
+                updated_tags = knowledge_card_dao.update_tags(card_id=card_id, tag=tag)
+                if updated_tags is None:
+                    raise HTTPException(status_code=500, detail="Failed to update tags.")
+                
+                return {"status_code": 200, "message": "Tag added successfully.", "tags": updated_tags}
             else:
-                return {"message": "Tag already exists."}
+                return {"status_code": 400, "message": "Tag already exists.", "tags": tags}
         
-        except Exception as exception:
-            print(f"Error adding tag: {exception}")
-            return None
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            print(f"Error adding tag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+    def remove_tag(self, card_id: str, user_id: str, tag: str):
+        """
+        Remove a tag from a specific card.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+
+            if str(card["user_id"]) != str(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+
+            tags = card.get("tags", [])
+            if tag in tags:
+                updated_tags = knowledge_card_dao.remove_tag(card_id=card_id, tag=tag)
+                if updated_tags is None:
+                    raise HTTPException(status_code=500, detail="Failed to update tags.")
+                
+                return {"status_code": 200, "message": "Tag removed successfully.", "tags": updated_tags}
+            else:
+                return {"status_code": 400, "message": "Tag does not exist.", "tags": tags}
+        
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            print(f"Error removing tag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
