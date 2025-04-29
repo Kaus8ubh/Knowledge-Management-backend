@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
-
+from pymongo import ReturnDocument
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from database import db_instance
@@ -420,12 +420,25 @@ class KnowledgeCardDao:
             result = self.knowledge_cards_collection.find_one_and_update(
                 {"_id": ObjectId(card_id)},
                 {"$addToSet": {"tags": tag}},
-                return_document=True
+                return_document=ReturnDocument.AFTER 
             )
             if result:
                 return result.get("tags", [])
             return None
         except Exception as e:
-            print(f"Error adding tag: {e}")
+            print(f"Error updating tags: {e}")
             return None
-        
+            
+    def remove_tag(self, card_id: str, tag: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$pull": {"tags": tag}},
+                return_document=ReturnDocument.AFTER 
+            )
+            if result:
+                return result.get("tags", [])
+            return None
+        except Exception as e:
+            print(f"Error removing tag: {e}")
+            return None
