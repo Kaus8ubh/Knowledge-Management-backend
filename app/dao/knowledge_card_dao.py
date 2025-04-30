@@ -401,18 +401,32 @@ class KnowledgeCardDao:
             print(f"Error while unbookmarking the card: {exception}")
             return None
         
-    def update_card_category_in_db(self, card_id: str, category: str):
+    def add_category(self, card_id: str, category: str):
         try:
             result = self.knowledge_cards_collection.find_one_and_update(
                 {"_id": ObjectId(card_id)},
                 {"$addToSet": {"category": category}},
-                return_document=True
+                return_document=ReturnDocument.AFTER 
             )
             if result:
-                return result.get("category", "")
+                return result.get("category", [])
             return None
         except Exception as e:
             print(f"Error updating category: {e}")
+            return None
+            
+    def remove_category(self, card_id: str, category: str):
+        try:
+            result = self.knowledge_cards_collection.find_one_and_update(
+                {"_id": ObjectId(card_id)},
+                {"$pull": {"category": category}},
+                return_document=ReturnDocument.AFTER 
+            )
+            if result:
+                return result.get("category", [])
+            return None
+        except Exception as e:
+            print(f"Error removing category: {e}")
             return None
         
     def update_tags(self, card_id: str, tag: str):
