@@ -171,8 +171,9 @@ async def add_category(card_id: str, payload: UpdateCategoryModel):
         return updated_card
     raise HTTPException(status_code=404, detail="Card not found")
 
-@knowledge_card_router.delete("/{card_id}/remove-category")
+@knowledge_card_router.post("/{card_id}/remove-category")
 async def remove_category(card_id: str, payload: UpdateCategoryModel):
+    print("Payload received:", payload.categories)
     response = knowledge_card_service.remove_category(card_id,  payload.categories)
     return response
     
