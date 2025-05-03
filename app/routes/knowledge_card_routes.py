@@ -165,11 +165,17 @@ async def get_all_categories():
         raise HTTPException(status_code=400, detail=str(exception))
        
 @knowledge_card_router.put("/{card_id}/update-category")
-async def update_category(card_id: str, payload: UpdateCategoryModel):
-    updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
+async def add_category(card_id: str, payload: UpdateCategoryModel):
+    updated_card =knowledge_card_service.add_category(card_id, payload.categories)
     if updated_card:
         return updated_card
     raise HTTPException(status_code=404, detail="Card not found")
+
+@knowledge_card_router.post("/{card_id}/remove-category")
+async def remove_category(card_id: str, payload: UpdateCategoryModel):
+    print("Payload received:", payload.categories)
+    response = knowledge_card_service.remove_category(card_id,  payload.categories)
+    return response
     
 @knowledge_card_router.post("/{card_id}/generate-qna", response_model=List[Dict[str, str]])
 async def generate_qna(card_id: str, user_id: str):
