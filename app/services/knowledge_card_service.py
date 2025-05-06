@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse
 from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
 from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from dao import knowledge_card_dao, card_cluster_dao, user_dao
-from services.card_cluster_service import ClusteringServices
 from fastapi.responses import JSONResponse  
 from datetime import datetime
 import io
@@ -19,6 +18,10 @@ from html2docx import html2docx
 
 
 class KnowledgeCardService:
+
+    def __init__(self):
+        from services import CategoryService 
+        self.category_service = CategoryService()
 
     def get_all_cards(self, token: str, skip: int = 0, limit: int = 4):
         """
@@ -151,9 +154,11 @@ class KnowledgeCardService:
                 print("title done")
                 # extract tags from suummary
                 tags = gemini_text_processor.generate_tags(summary)
-                print("tags done")
+                print("tags done", tags)
+                categories = []
                 category = gemini_text_processor.generate_category(summary)
-                print("category done: " + category)
+                categories.append(category)
+                print("category done: ", category)
                 # embedding = embedder_for_title.embed_text(title)
                 embedding = []
                 print("embedding done")
@@ -164,7 +169,7 @@ class KnowledgeCardService:
                 tags=[]
                 embedding=[]
                 source_url=""
-                category="Misc"
+                category=[]
 
             thumbnail = get_thumbnail(category=category)
             markup_summary = convert_summary_to_html(summary_text=summary)
@@ -182,7 +187,7 @@ class KnowledgeCardService:
                                  thumbnail=thumbnail,
                                  favourite=False,
                                  archive=False,
-                                 category=category)
+                                 category=categories)
             
             new_card = knowledge_card_dao.insert_knowledge_card(card=card)
 
@@ -225,14 +230,14 @@ class KnowledgeCardService:
             summary = gemini_text_processor.summarize_text(chunks)
             title = gemini_text_processor.get_title(summary)
             tags = gemini_text_processor.generate_tags(summary)
-            category = gemini_text_processor.generate_category(summary)
+            category = [gemini_text_processor.generate_category(summary)]
             embedding = []  
 
             markup_summary = convert_summary_to_html(summary)
             created_at = datetime.utcnow().isoformat()
             final_note = note if note else "No Note Yet"
 
-            thumbnail = get_thumbnail(category=category)
+            thumbnail = get_thumbnail(category=category[0])
 
             # Create KnowledgeCard object
             card = KnowledgeCard(
@@ -596,9 +601,76 @@ class KnowledgeCardService:
             print(f"Error getting bookmarked cards: {exception}")
             return None
         
-    def update_card_category(self, card_id: str, category: str):
-        return knowledge_card_dao.update_card_category_in_db(card_id, category)
+    def add_category(self, card_id: str, categories: list[str]):
+        """
+        Add a category to a specific card.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+
+            existing_categories = card.get("category", [])
+
+            # add category only if it doesn't already exist
+            added = False
+            for cat in categories:
+                self.category_service.add_category_if_not_exists(name=cat, created_by="system")
+                if cat not in existing_categories:
+                    knowledge_card_dao.add_category(card_id=card_id, category=cat)
+                    added = True
+
+            if added:
+                updated_card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+                return {
+                    "status_code": 200,
+                    "message": "Categories updated successfully.",
+                    "category": updated_card.get("category", [])
+                }
+            else:
+                return {
+                    "status_code": 400,
+                    "message": "No new categories added.",
+                    "category": existing_categories
+                }
         
+        except Exception as e:
+            print(f"Error adding category: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+    def remove_category(self, card_id: str, categories: list[str]):
+        """
+        Remove one or more categories from a specific card.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+
+            existing_categories = card.get("category", [])
+            updated_categories = existing_categories
+
+            for category in categories:
+                if category in existing_categories:
+                    updated_categories = knowledge_card_dao.remove_category(card_id, category)
+
+            if updated_categories is None:
+                raise HTTPException(status_code=500, detail="Failed to update category.")
+
+            return {
+                "status_code": 200,
+                "message": "Category(ies) removed successfully.",
+                "category": updated_categories,
+            }
+
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            print(f"Error removing categories: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+    
     def generate_qna(self, card_id: str, user_id: str ):
         """
         Usage: Generate QnA from a knowledge card.
@@ -645,3 +717,61 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error generating knowledge map: {exception}")
             return None
+        
+    def add_tag(self, card_id: str, user_id: str, tag: str):
+        """
+        Add a tag to a specific card.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+
+            if str(card["user_id"]) != str(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+
+            tags = card.get("tags", [])
+            if tag not in tags:
+                updated_tags = knowledge_card_dao.update_tags(card_id=card_id, tag=tag)
+                if updated_tags is None:
+                    raise HTTPException(status_code=500, detail="Failed to update tags.")
+                
+                return {"status_code": 200, "message": "Tag added successfully.", "tags": updated_tags}
+            else:
+                return {"status_code": 400, "message": "Tag already exists.", "tags": tags}
+        
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            print(f"Error adding tag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+    def remove_tag(self, card_id: str, user_id: str, tag: str):
+        """
+        Remove a tag from a specific card.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+
+            if str(card["user_id"]) != str(user_id):
+                raise HTTPException(status_code=403, detail="Unauthorized: Not the card owner.")
+
+            tags = card.get("tags", [])
+            if tag in tags:
+                updated_tags = knowledge_card_dao.remove_tag(card_id=card_id, tag=tag)
+                if updated_tags is None:
+                    raise HTTPException(status_code=500, detail="Failed to update tags.")
+                
+                return {"status_code": 200, "message": "Tag removed successfully.", "tags": updated_tags}
+            else:
+                return {"status_code": 400, "message": "Tag does not exist.", "tags": tags}
+        
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            print(f"Error removing tag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")

@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
 from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel
-from services import knowledge_card_service
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel, AddtagModel
+from services import knowledge_card_service, category_service
 
 knowledge_card_router = APIRouter()
 
@@ -154,13 +154,28 @@ async def get_bookmarked_cards(user_id: str, skip: int = 0, limit: int = 4):
         return knowledge_card_service.get_bookmarked_cards(user_id=user_id, skip=skip, limit=limit)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
-    
+
+@knowledge_card_router.get("/categories")
+async def get_all_categories():
+    """API endpoint to get all categories"""
+    try:
+        categories = category_service.get_available_categories()
+        return {"categories": categories}
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+       
 @knowledge_card_router.put("/{card_id}/update-category")
-async def update_category(card_id: str, payload: UpdateCategoryModel):
-    updated_card =knowledge_card_service.update_card_category(card_id, payload.category)
+async def add_category(card_id: str, payload: UpdateCategoryModel):
+    updated_card =knowledge_card_service.add_category(card_id, payload.categories)
     if updated_card:
         return updated_card
     raise HTTPException(status_code=404, detail="Card not found")
+
+@knowledge_card_router.post("/{card_id}/remove-category")
+async def remove_category(card_id: str, payload: UpdateCategoryModel):
+    print("Payload received:", payload.categories)
+    response = knowledge_card_service.remove_category(card_id,  payload.categories)
+    return response
     
 @knowledge_card_router.post("/{card_id}/generate-qna", response_model=List[Dict[str, str]])
 async def generate_qna(card_id: str, user_id: str):
@@ -177,3 +192,13 @@ async def get_knowledge_map(card_id: str):
         return knowledge_card_service.get_knowledge_map(card_id=card_id)
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.put("/{card_id}/add-tag")
+async def add_tag(card_id: str, user_id: str, payload: AddtagModel):
+    response = knowledge_card_service.add_tag(card_id, user_id, payload.tag)
+    return response
+
+@knowledge_card_router.delete("/{card_id}/remove-tag")
+async def remove_tag(card_id: str, user_id: str, payload: AddtagModel):
+    response = knowledge_card_service.remove_tag(card_id, user_id, payload.tag)
+    return response

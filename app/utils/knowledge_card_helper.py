@@ -15,7 +15,7 @@ def to_knowledge_card(card) -> KnowledgeCard:
         thumbnail=card.get("thumbnail"),
         favourite=card.get("favourite", False),
         archive=card.get("archive", False),
-        category=card.get("category", "Misc"),
+        category=card.get("category") or [],
         shared_token=card.get("shared_token"),
         public=card.get("public", False),
         likes=card.get("likes", 0),

@@ -15,7 +15,7 @@ class KnowledgeCard(BaseModel):
     thumbnail:Optional[str]
     favourite: Optional[bool]
     archive: Optional[bool]
-    category: Optional[str]
+    category: Optional[list]
     shared_token: Optional[str]=None
     public: Optional[bool]=False
     likes: Optional[int]=0
@@ -41,4 +41,7 @@ class EditKnowledgeCard(BaseModel):
     note: Optional[str]
 
 class UpdateCategoryModel(BaseModel):
-    category: str
+    categories: list[str]
+
+class AddtagModel(BaseModel):
+    tag: str
