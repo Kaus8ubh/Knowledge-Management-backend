@@ -237,6 +237,39 @@ class TextProcessingWithGemini:
             print(f"Error generating Q&A: {exception}")
             return None
 
+    def answer_custom_question(self, content, question):
+        """
+        Answers a custom question strictly based on the provided content.
+        Returns a clear, direct answer or a respectful message if the content doesn't cover the topic.
+        """
+        try:
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            prompt = f"""
+                You are a helpful and accurate assistant. A user will ask a question based on the provided content.
+                - Use a friendly, clear, and natural tone.
+                - Add emojis to make it feel interactive and engaging (but don't overdo it).
+                - If the content contains information to answer the question, answer it directly and naturally, without stating "Based on the content, I can answer".
+                - If the question cannot be answered using the content, politely respond that the topic is not covered and briefly describe what the content *is* about.
+
+                ---
+                Content:
+                \"\"\"{content}\"\"\"
+
+                Question:
+                \"\"\"{question}\"\"\"
+
+                Answer:
+                """
+
+            response = client.generate_content(prompt)
+            answer = self.extract_text_from_response(response)
+            return answer
+
+        except Exception as exception:
+            print(f"Error answering custom question: {exception}")
+            return "There was an error processing your request. Please try again."
+
     def parse_qna_to_list(self, text):
         """
             Converts raw Q&A text into a structured list of Q&A dictionaries.        

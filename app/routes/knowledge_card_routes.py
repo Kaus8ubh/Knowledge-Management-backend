@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
 from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel, AddtagModel
+from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel, AddtagModel, ChatRequest
 from services import knowledge_card_service, category_service
 
 knowledge_card_router = APIRouter()
@@ -182,6 +182,19 @@ async def generate_qna(card_id: str, user_id: str):
     """API endpoint to generate QnA from shared data"""
     try:
         return knowledge_card_service.generate_qna(card_id=card_id, user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.post("/chatbot/")
+async def custom_question(request: ChatRequest):
+    """
+    API endpoint to answer a question based on a knowledge card's content.
+    """
+    try:
+        return knowledge_card_service.generate_custom_qna(
+            card_id=request.card_id,
+            question=request.message
+        )
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
     
