@@ -45,3 +45,7 @@ class UpdateCategoryModel(BaseModel):
 
 class AddtagModel(BaseModel):
     tag: str
+
+class ChatRequest(BaseModel):
+   card_id: str
+   message: str   

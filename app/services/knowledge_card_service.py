@@ -696,6 +696,25 @@ class KnowledgeCardService:
         except Exception as exception:
             print(f"Error generating QnA: {exception}")
             return None
+    
+    def generate_custom_qna(self, card_id: str, question: str):
+        """
+        Usage: Generate QnA from a knowledge card.
+        Parameters: card_id (str): The ID of the card to generate QnA from.
+        Returns: dict: A list of dictionary containing the generated QnA.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            
+            qna = gemini_text_processor.answer_custom_question(card["summary"], question)
+            return qna
+
+        except Exception as exception:
+            print(f"Error generating QnA: {exception}")
+            return None
         
     def get_knowledge_map(self, card_id: str):
         """
