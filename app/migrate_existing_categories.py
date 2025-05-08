@@ -1,4 +1,4 @@
-from database import db_instance
+from app.database import db_instance
 from datetime import datetime
 
 def migrate_existing_categories():

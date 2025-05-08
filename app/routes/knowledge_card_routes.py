@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi import UploadFile, File, Form
 from typing import Dict, List, Optional
 from fastapi.responses import JSONResponse
-from models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel, AddtagModel, ChatRequest
-from services import knowledge_card_service, category_service
+from app.models import knowledge_card_model, KnowledgeCardRequest, EditKnowledgeCard, PublicKnowledgeCard, UpdateCategoryModel, AddtagModel, ChatRequest
+from app.services import knowledge_card_service, category_service
 
 knowledge_card_router = APIRouter()
 

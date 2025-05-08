@@ -1,4 +1,4 @@
-from models import KnowledgeCard
+from app.models import KnowledgeCard
 
 
 def to_knowledge_card(card) -> KnowledgeCard:

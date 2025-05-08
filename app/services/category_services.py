@@ -1,4 +1,4 @@
-from dao.category_dao import CategoryDAO
+from app.dao.category_dao import CategoryDAO
 
 class CategoryService:
     def __init__(self):

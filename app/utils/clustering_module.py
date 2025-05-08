@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from bson import ObjectId
 from typing import List, Dict, Any, Tuple
-from utils import cosine_distance_matrix
+from app.utils import cosine_distance_matrix
 
 
 def clustering_module(vectors , eps: float = 0.2, min_samples: int = 3):

@@ -1,7 +1,7 @@
 from fastapi import HTTPException
-from models import User
-from dao import user_dao
-from utils import create_access_token
+from app.models import User
+from app.dao import user_dao
+from app.utils import create_access_token
 
 
 class AuthService:

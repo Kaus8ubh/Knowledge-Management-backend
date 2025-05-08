@@ -1,6 +1,6 @@
 import jwt
 from jwt import InvalidTokenError, DecodeError
-from config import Config
+from app.config import Config
 
 '''
 Name: create_access_token 

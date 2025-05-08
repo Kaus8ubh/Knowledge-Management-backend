@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from models import card_cluster_model
-from services import card_cluster_service
+from app.models import card_cluster_model
+from app.services import card_cluster_service
 
 card_cluster_router = APIRouter()
 

@@ -4,9 +4,9 @@ from sklearn.decomposition import PCA
 from bson import ObjectId
 from typing import List, Dict, Any, Tuple
 
-from dao import knowledge_card_dao
-from dao import card_cluster_dao
-from utils import cosine_distance_matrix, generate_topic_name, clustering_module
+from app.dao import knowledge_card_dao
+from app.dao import card_cluster_dao
+from app.utils import cosine_distance_matrix, generate_topic_name, clustering_module
 
 class ClusteringServices:
 

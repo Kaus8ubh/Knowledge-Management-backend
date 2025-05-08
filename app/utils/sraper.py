@@ -1,7 +1,7 @@
 from selenium.webdriver import Remote, ChromeOptions
 from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
 from bs4 import BeautifulSoup
-from config import Config
+from app.config import Config
 
 SBR_WEBDRIVER = f'https://{Config.AUTH}@brd.superproxy.io:9515'
 

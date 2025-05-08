@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import google.generativeai as genai
-from config import Config
+from app.config import Config
 
 api_key = Config.GEMINI_API_KEY 
 genai.configure(api_key=api_key)

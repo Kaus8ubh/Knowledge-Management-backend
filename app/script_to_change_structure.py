@@ -1,5 +1,5 @@
 # to change the data type of the "category" which is currently "string" to "list" (array of categories)
-from database import db_instance
+from app.database import db_instance
 
 def migrate_category_field():
     
