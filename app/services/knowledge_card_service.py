@@ -5,14 +5,14 @@ from bson import ObjectId
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
-from models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
-from dao import knowledge_card_dao, card_cluster_dao, user_dao
+from app.utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
+from app.models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
+from app.dao import knowledge_card_dao, card_cluster_dao, user_dao
 from fastapi.responses import JSONResponse  
 from datetime import datetime
 import io
 import secrets
-from config import Config
+from app.config import Config
 from docx import Document
 from html2docx import html2docx
 
@@ -20,7 +20,7 @@ from html2docx import html2docx
 class KnowledgeCardService:
 
     def __init__(self):
-        from services import CategoryService 
+        from app.services import CategoryService 
         self.category_service = CategoryService()
 
     def get_all_cards(self, token: str, skip: int = 0, limit: int = 4):
@@ -693,6 +693,25 @@ class KnowledgeCardService:
             else:
                 return qna
         
+        except Exception as exception:
+            print(f"Error generating QnA: {exception}")
+            return None
+    
+    def generate_custom_qna(self, card_id: str, question: str):
+        """
+        Usage: Generate QnA from a knowledge card.
+        Parameters: card_id (str): The ID of the card to generate QnA from.
+        Returns: dict: A list of dictionary containing the generated QnA.
+        """
+        try:
+            card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+            
+            if not card:
+                raise HTTPException(status_code=404, detail="Card not found.")
+            
+            qna = gemini_text_processor.answer_custom_question(card["summary"], question)
+            return qna
+
         except Exception as exception:
             print(f"Error generating QnA: {exception}")
             return None

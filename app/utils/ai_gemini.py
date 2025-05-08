@@ -1,7 +1,7 @@
 import json
 import google.generativeai as genai
 import re
-from config import Config
+from app.config import Config
 
 class TextProcessingWithGemini:
     
@@ -236,6 +236,42 @@ class TextProcessingWithGemini:
         except Exception as exception:
             print(f"Error generating Q&A: {exception}")
             return None
+
+    def answer_custom_question(self, content, question):
+        """
+        Answers a custom question strictly based on the provided content.
+        Returns a clear, direct answer or a respectful message if the content doesn't cover the topic.
+        """
+        try:
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            prompt = f"""
+                You are a helpful and accurate assistant. A user will ask a question based on the provided content.
+
+                Rules:
+                - If the content includes related information (even partial), try to explain naturally based on it.
+                - Use a conversational tone and light emojis 😊
+                - Do not say "Based on the content..."—just answer as if you're chatting.
+                - If a question is gibberish or unclear, politely ask the user to rephrase 🤔.
+                - If the topic is unrelated and no inference is possible, clearly say it's not covered and summarize what the content is about.
+
+                ---
+                Content:
+                \"\"\"{content}\"\"\"
+
+                Question:
+                \"\"\"{question}\"\"\"
+
+                Answer:
+                """
+
+            response = client.generate_content(prompt)
+            answer = self.extract_text_from_response(response)
+            return answer
+
+        except Exception as exception:
+            print(f"Error answering custom question: {exception}")
+            return "There was an error processing your request. Please try again."
 
     def parse_qna_to_list(self, text):
         """

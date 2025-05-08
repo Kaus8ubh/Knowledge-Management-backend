@@ -3,9 +3,9 @@ from datetime import datetime
 from pymongo import ReturnDocument
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from database import db_instance
-from models import KnowledgeCard
-from utils import to_knowledge_card
+from app.database import db_instance
+from app.models import KnowledgeCard
+from app.utils import to_knowledge_card
 
 class KnowledgeCardDao:
     def __init__(self):

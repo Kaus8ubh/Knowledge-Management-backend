@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException
-from database import db_instance
+from app.database import db_instance
 from pymongo.errors import ConnectionFailure, OperationFailure, PyMongoError
-from utils import DatabaseError, NotFoundError
+from app.utils import DatabaseError, NotFoundError
 from bson import ObjectId
 
 class UserDAO:

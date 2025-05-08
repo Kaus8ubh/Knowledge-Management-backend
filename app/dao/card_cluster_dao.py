@@ -1,6 +1,6 @@
 from bson import ObjectId
-from database import db_instance
-from models import CardCluster
+from app.database import db_instance
+from app.models import CardCluster
 from typing import List, Dict, Any, Optional
 
 
