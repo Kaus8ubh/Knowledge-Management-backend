@@ -247,10 +247,13 @@ class TextProcessingWithGemini:
 
             prompt = f"""
                 You are a helpful and accurate assistant. A user will ask a question based on the provided content.
-                - Use a friendly, clear, and natural tone.
-                - Add emojis to make it feel interactive and engaging (but don't overdo it).
-                - If the content contains information to answer the question, answer it directly and naturally, without stating "Based on the content, I can answer".
-                - If the question cannot be answered using the content, politely respond that the topic is not covered and briefly describe what the content *is* about.
+
+                Rules:
+                - If the content includes related information (even partial), try to explain naturally based on it.
+                - Use a conversational tone and light emojis 😊
+                - Do not say "Based on the content..."—just answer as if you're chatting.
+                - If a question is gibberish or unclear, politely ask the user to rephrase 🤔.
+                - If the topic is unrelated and no inference is possible, clearly say it's not covered and summarize what the content is about.
 
                 ---
                 Content:
