@@ -1,6 +1,6 @@
 import requests
 from retry import retry
-from config import Config
+from app.config import Config
 
 class Embedder:
     """Class to handle text embedding using Hugging Face API."""

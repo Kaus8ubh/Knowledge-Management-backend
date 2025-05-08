@@ -1,7 +1,7 @@
 import json
 import google.generativeai as genai
 import re
-from config import Config
+from app.config import Config
 
 class TextProcessingWithGemini:
     
