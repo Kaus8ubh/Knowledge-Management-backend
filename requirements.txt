@@ -26,3 +26,4 @@ PyPDF2
 python-multipart
 weasyprint
 html2docx
+python-magic-bin
