@@ -163,10 +163,19 @@ async def get_all_categories():
         return {"categories": categories}
     except Exception as exception:
         raise HTTPException(status_code=400, detail=str(exception))
+    
+@knowledge_card_router.get("/{user_id}/categories")
+async def get_categories_for_user(user_id: str):
+    """API endpoint to get all categories for a user"""
+    try:
+        categories = category_service.get_category_for_user(user_id=user_id)
+        return {"categories": categories}
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
        
 @knowledge_card_router.put("/{card_id}/update-category")
 async def add_category(card_id: str, payload: UpdateCategoryModel):
-    updated_card =knowledge_card_service.add_category(card_id, payload.categories)
+    updated_card =knowledge_card_service.add_category(card_id, payload.user_id, payload.categories)
     if updated_card:
         return updated_card
     raise HTTPException(status_code=404, detail="Card not found")

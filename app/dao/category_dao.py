@@ -21,3 +21,9 @@ class CategoryDAO:
     def get_all_categories(self):
         """Get all categories."""
         return list(self.collection.find({}, {"_id": 0, "name": 1}).sort("name", 1))
+
+    def get_categories_for_user(self, user_id: str):
+        """Get categories for a specific user."""
+        return list(self.collection.find(
+            {"created_by": {"$in": [user_id, "system"]}},
+            {"_id": 0, "name": 1}).sort("name", 1))
