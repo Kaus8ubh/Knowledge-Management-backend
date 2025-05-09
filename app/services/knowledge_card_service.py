@@ -601,7 +601,7 @@ class KnowledgeCardService:
             print(f"Error getting bookmarked cards: {exception}")
             return None
         
-    def add_category(self, card_id: str, categories: list[str]):
+    def add_category(self, card_id: str, user_id:str, categories: list[str]):
         """
         Add a category to a specific card.
         """
@@ -611,14 +611,15 @@ class KnowledgeCardService:
             if not card:
                 raise HTTPException(status_code=404, detail="Card not found.")
 
-            existing_categories = card.get("category", [])
+            existing_categories = [cat.lower() for cat in card.get("category", [])]
 
             # add category only if it doesn't already exist
             added = False
             for cat in categories:
-                self.category_service.add_category_if_not_exists(name=cat, created_by="system")
-                if cat not in existing_categories:
-                    knowledge_card_dao.add_category(card_id=card_id, category=cat)
+                cat_lower = cat.lower()
+                self.category_service.add_category_if_not_exists(name=cat_lower, created_by=user_id)
+                if cat_lower not in existing_categories:
+                    knowledge_card_dao.add_category(card_id=card_id, category=cat_lower)
                     added = True
 
             if added:

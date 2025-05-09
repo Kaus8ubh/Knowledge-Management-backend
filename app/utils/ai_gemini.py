@@ -167,10 +167,10 @@ class TextProcessingWithGemini:
         try:
             # List of predefined categories
             predefined_categories = [
-                "Tech", "Science", "Health", "Business", "Politics", 
-                "Entertainment", "Sports", "Education", "Travel", "Food", 
-                "Lifestyle", "Fashion", "Music", "Movies", "Gaming", 
-                "News", "Environment", "Social Media", "Finance", "Art"
+                "tech", "science", "health", "business", "politics", 
+                "entertainment", "sports", "education", "travel", "food", 
+                "lifestyle", "fashion", "music", "movies", "gaming", 
+                "news", "environment", "social media", "finance", "art"
             ]
 
             client = genai.GenerativeModel("gemini-2.0-flash")
@@ -178,14 +178,14 @@ class TextProcessingWithGemini:
             # Request category generation
             response = client.generate_content(f"""
                     Categorize the following content into one of these predefined categories:
-                    Technology, Science, Health, Business, Politics, Entertainment, Sports,
-                    Education, Travel, Food, Lifestyle, Fashion, Music, Movies, Gaming,
-                    News, Environment, Social Media, Finance, Art.
+                    technology, science, health, business, politics, entertainment, sports,
+                    education, travel, food, lifestyle, fashion, music, movies, gaming,
+                    news, environment, social media, finance, art.
                     {content}
                     ### Category Guidelines:
                     1. Choose only one category from the predefined list.
                     2. Provide the most relevant category that best describes the content.
-                    3. Return the category as a single word (e.g., Tech, News, Science).
+                    3. Return the category as a single word (e.g., tech, news, science).
                     """)
 
             category = self.extract_text_from_response(response).strip()
@@ -239,8 +239,9 @@ class TextProcessingWithGemini:
 
     def answer_custom_question(self, content, question):
         """
-        Answers a custom question strictly based on the provided content.
-        Returns a clear, direct answer or a respectful message if the content doesn't cover the topic.
+        Answers a custom question based on the provided content.
+        Returns a clear, direct answer for questions related to the content,
+        or a respectful message if the question is completely unrelated.
         """
         try:
             client = genai.GenerativeModel("gemini-2.0-flash")
@@ -249,11 +250,24 @@ class TextProcessingWithGemini:
                 You are a helpful and accurate assistant. A user will ask a question based on the provided content.
 
                 Rules:
-                - If the content includes related information (even partial), try to explain naturally based on it.
+                - Answer questions that are directly related OR tangentially related to the content
+                - If the question is about a topic mentioned in the content, even briefly, provide a helpful answer
+                - Feel free to make reasonable inferences based on the content
                 - Use a conversational tone and light emojis 😊
-                - Do not say "Based on the content..."—just answer as if you're chatting.
-                - If a question is gibberish or unclear, politely ask the user to rephrase 🤔.
-                - If the topic is unrelated and no inference is possible, clearly say it's not covered and summarize what the content is about.
+                - Do not say "Based on the content..."—just answer as if you're chatting
+                - If a question is gibberish or unclear, politely ask the user to rephrase 🤔
+                - IMPORTANT: ONLY refuse to answer if the question is COMPLETELY unrelated to anything in the content
+                - If refusing, briefly summarize what topics the content actually covers
+
+                Examples of when to answer:
+                - Question asks about something explicitly mentioned in content
+                - Question asks for an opinion/explanation about a topic mentioned in content
+                - Question asks about implications or related aspects of topics in content
+                - Question asks for more details about something briefly mentioned
+
+                Examples of when NOT to answer:
+                - Question asks about a completely different subject with no connection to content
+                - Question asks for information about topics with zero mention in the content
 
                 ---
                 Content:
