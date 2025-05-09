@@ -15,3 +15,7 @@ class CategoryService:
     def get_available_categories(self):
         """Get all available categories."""
         return self.dao.get_all_categories()
+    
+    def get_category_for_user(self, user_id: str):
+        """Get categories for a specific user."""
+        return self.dao.get_categories_for_user(user_id)

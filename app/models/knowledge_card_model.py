@@ -41,6 +41,7 @@ class EditKnowledgeCard(BaseModel):
     note: Optional[str]
 
 class UpdateCategoryModel(BaseModel):
+    user_id: str
     categories: list[str]
 
 class AddtagModel(BaseModel):

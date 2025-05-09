@@ -5,6 +5,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+import magic
 from app.utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
 from app.models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from app.dao import knowledge_card_dao, card_cluster_dao, user_dao
@@ -203,43 +204,51 @@ class KnowledgeCardService:
     async def process_file_for_kc(self, token: str, file: UploadFile, note: str = ""):
         try:
             decoded_token = decode_access_token(token)
-            print(token)
             user_id = decoded_token["userId"]
-            print(user_id)
             filename = file.filename
             suffix = filename.split('.')[-1].lower()
 
-            # Save data to temp file and extract text
+            # Read content and detect MIME type
+            content = await file.read()
+            mime_type = magic.from_buffer(content, mime=True)
+
+            allowed_types = {
+                "application/pdf": "pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
+            }
+
+            if mime_type not in allowed_types:
+                raise HTTPException(status_code=406, detail={"message":"Invalid file type. Only PDF and DOCX are allowed."})
+
+            # Confirm suffix matches the MIME type
+            expected_suffix = allowed_types[mime_type]
+            if suffix != expected_suffix:
+                suffix = expected_suffix  # Correct it to match MIME type
+
+            # Write to a temp file
             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{suffix}") as temp:
-                content = await file.read()  # Await the file read
                 temp.write(content)
                 temp_path = temp.name
 
+            # Extract text
             if suffix == "pdf":
                 text = extract_text_from_pdf(temp_path)
             elif suffix == "docx":
                 text = extract_text_from_docx(temp_path)
-            else:
-                os.remove(temp_path)  # Clean up temporary file
-                return {"error": "unsupported file type"}
 
-            os.remove(temp_path)  # Clean up temporary file
+            os.remove(temp_path)
 
-            # Text processing pipeline
+            # Text processing
             chunks = scraper.split_content(text)
             summary = gemini_text_processor.summarize_text(chunks)
             title = gemini_text_processor.get_title(summary)
             tags = gemini_text_processor.generate_tags(summary)
             category = [gemini_text_processor.generate_category(summary)]
-            embedding = []  
-
             markup_summary = convert_summary_to_html(summary)
             created_at = datetime.utcnow().isoformat()
             final_note = note if note else "No Note Yet"
-
             thumbnail = get_thumbnail(category=category[0])
 
-            # Create KnowledgeCard object
             card = KnowledgeCard(
                 user_id=user_id,
                 title=title,
@@ -247,21 +256,19 @@ class KnowledgeCardService:
                 tags=tags,
                 note=final_note,
                 created_at=created_at,
-                embedded_vector=embedding,
-                source_url= None, 
+                embedded_vector=[],
+                source_url=None,
                 thumbnail=thumbnail,
                 favourite=False,
                 archive=False,
                 category=category
             )
 
-            # Insert the new card into the database
-            new_card = knowledge_card_dao.insert_knowledge_card(card)
-            return new_card
+            return knowledge_card_dao.insert_knowledge_card(card)
 
         except Exception as exception:
             print(f"Error processing file card: {exception}")
-            return None
+            raise HTTPException(status_code=500, detail="Internal Server Error")
         
     def edit_knowledge_card(self, details: knowledge_card_model):
         """
@@ -601,7 +608,7 @@ class KnowledgeCardService:
             print(f"Error getting bookmarked cards: {exception}")
             return None
         
-    def add_category(self, card_id: str, categories: list[str]):
+    def add_category(self, card_id: str, user_id:str, categories: list[str]):
         """
         Add a category to a specific card.
         """
@@ -611,14 +618,15 @@ class KnowledgeCardService:
             if not card:
                 raise HTTPException(status_code=404, detail="Card not found.")
 
-            existing_categories = card.get("category", [])
+            existing_categories = [cat.lower() for cat in card.get("category", [])]
 
             # add category only if it doesn't already exist
             added = False
             for cat in categories:
-                self.category_service.add_category_if_not_exists(name=cat, created_by="system")
-                if cat not in existing_categories:
-                    knowledge_card_dao.add_category(card_id=card_id, category=cat)
+                cat_lower = cat.lower()
+                self.category_service.add_category_if_not_exists(name=cat_lower, created_by=user_id)
+                if cat_lower not in existing_categories:
+                    knowledge_card_dao.add_category(card_id=card_id, category=cat_lower)
                     added = True
 
             if added:
