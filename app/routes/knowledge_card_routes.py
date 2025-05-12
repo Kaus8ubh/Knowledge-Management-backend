@@ -224,3 +224,11 @@ async def add_tag(card_id: str, user_id: str, payload: AddtagModel):
 async def remove_tag(card_id: str, user_id: str, payload: AddtagModel):
     response = knowledge_card_service.remove_tag(card_id, user_id, payload.tag)
     return response
+
+@knowledge_card_router.get("/dashboard")
+async def get_dashboard_data(user_id: str):
+    """API endpoint to get dashboard data"""
+    try:
+        return knowledge_card_service.get_dashboard_data(user_id=user_id)
+    except Exception as exception:
+        raise HTTPException(status_code=400, detail=str(exception))
