@@ -456,3 +456,39 @@ class KnowledgeCardDao:
         except Exception as e:
             print(f"Error removing tag: {e}")
             return None
+        
+    def get_dashboard_data(self, user_id: str):
+        def serialize_doc(doc):
+            doc = dict(doc)
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
+                doc["user_id"] = str(doc["user_id"])
+            return doc
+        try:
+            total_cards = self.knowledge_cards_collection.count_documents({ "user_id": ObjectId(user_id) })
+            archived = self.knowledge_cards_collection.count_documents({ "user_id": ObjectId(user_id), "archive": True })
+            favourites = self.knowledge_cards_collection.count_documents({ "user_id": ObjectId(user_id), "favourite": True })
+            bookmarks = self.knowledge_cards_collection.count_documents({ "bookmarked_by": user_id })
+            global_bookmarks = self.knowledge_cards_collection.count_documents({ "public": True, "bookmarked_by": user_id })
+            shared = self.knowledge_cards_collection.count_documents({ "user_id": ObjectId(user_id), "shared_token": { "$ne": None } })
+
+            recent = self.knowledge_cards_collection.find({ "user_id": ObjectId(user_id) }).sort("created_at", -1).to_list(length=4)
+            recent = [serialize_doc(doc) for doc in recent]
+            
+            link_count = self.knowledge_cards_collection.count_documents({"user_id": ObjectId(user_id), "source_url": {"$ne": None}})
+            file_count = total_cards - link_count  # Total cards - link cards will give file cards
+
+
+            return {
+                "total_cards": total_cards,
+                "archived": archived,
+                "favourites": favourites,
+                "bookmarks": bookmarks,
+                "global_bookmarks": global_bookmarks,
+                "shared": shared,
+                "recent_cards": recent,
+                "upload_stats": {"link": link_count, "file": file_count}
+            }
+        except Exception as exception:
+            print(f"Error getting dashboard data: {exception}")
+            return None

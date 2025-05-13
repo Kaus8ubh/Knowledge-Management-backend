@@ -802,3 +802,17 @@ class KnowledgeCardService:
         except Exception as e:
             print(f"Error removing tag: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+    def get_dashboard_data(self, user_id: str):
+        """
+        Usage: Get dashboard data for a specific user.
+        Parameters: user_id (str): The ID of the user whose dashboard data is to be retrieved.
+        Returns: dict: A dictionary containing the dashboard data.
+        """
+        try:
+            dashboard_data = knowledge_card_dao.get_dashboard_data(user_id=user_id)
+            return dashboard_data
+
+        except Exception as exception:
+            print(f"Error getting dashboard data: {exception}")
+            return None
