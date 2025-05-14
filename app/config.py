@@ -14,4 +14,6 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
     AUTH = os.getenv("AUTH")
+    PROXY_USERNAME = os.getenv("PROXY_USERNAME")
+    PROXY_PASSWORD = os.getenv("PROXY_PASSWORD")
     BaseURL = os.getenv("BaseURL")

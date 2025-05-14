@@ -157,12 +157,13 @@ class TextProcessingWithGemini:
 
     def generate_category(self, content):
         """
-        Usage: Generate a single category based on the provided content, ensuring
-            the category is one of the predefined categories or "Uncategorized".
+        Usage: Generate a single category based on content, prioritizing predefined categories
+        but creating new specific ones when needed.
+        
         Parameters:
-            content (str): The content for which category is to be generated.
+            content (str): The content to categorize.
         Returns:
-            str: A category type (e.g., Tech, Social, Science, etc.) or "Uncategorized".
+            str: A category type - either from predefined list or a new specific category.
         """
         try:
             # List of predefined categories
@@ -175,29 +176,82 @@ class TextProcessingWithGemini:
 
             client = genai.GenerativeModel("gemini-2.0-flash")
 
-            # Request category generation
+            # Try to categorize from predefined list first
             response = client.generate_content(f"""
-                    Categorize the following content into one of these predefined categories:
-                    technology, science, health, business, politics, entertainment, sports,
-                    education, travel, food, lifestyle, fashion, music, movies, gaming,
-                    news, environment, social media, finance, art.
-                    {content}
-                    ### Category Guidelines:
-                    1. Choose only one category from the predefined list.
-                    2. Provide the most relevant category that best describes the content.
-                    3. Return the category as a single word (e.g., tech, news, science).
-                    """)
+                Categorize this content into ONE category from this list:
+                {', '.join(predefined_categories)}
+                
+                Content: {content}
+                
+                If content fits ANY of these categories, return ONLY the category name.
+                Return ONLY the single category word, lowercase, with no explanation.
+                """)
 
-            category = self.extract_text_from_response(response).strip()
-
-            # If the generated category is not in predefined categories, set it as "Misc"
-            if category not in predefined_categories:
-                category = "Misc"
-
-            return category
+            # Get and clean category
+            category = self.extract_text_from_response(response).strip().lower()
+            
+            # Check if category is in predefined list (exact or partial match)
+            for pred_cat in predefined_categories:
+                if category == pred_cat or pred_cat in category:
+                    return pred_cat
+                    
+            # If not in predefined list, get a new specific category
+            new_cat_response = client.generate_content(f"""
+                Create a specific, descriptive category (1-2 words) for this content:
+                {content}
+                
+                Return ONLY the category name in lowercase.
+                Be specific - don't use generic terms like "misc" or "other".
+                """)
+                
+            new_category = self.extract_text_from_response(new_cat_response).strip().lower()
+            
+            # Filter out generic categories
+            generic_terms = ["misc", "miscellaneous", "other", "general", "uncategorized"]
+            if any(term in new_category for term in generic_terms) or len(new_category) < 3:
+                # Try one more time with even simpler prompt
+                retry = client.generate_content(f"What single specific topic (1-2 words) best describes: {content[:300]}?")
+                new_category = self.extract_text_from_response(retry).strip().lower()
+            
+            return new_category
+            
         except Exception as exception:
             print(f"Error generating category: {exception}")
             return None
+            
+    def get_icon(self, category):
+        """
+        Usage: Generate an emoji icon based on the provided category using a generative model.
+        Parameters:
+            category (str): The category for which the icon is to be generated.
+        Returns:
+            str: The emoji representing the category.
+        """
+        try:
+            client = genai.GenerativeModel("gemini-2.0-flash")
+
+            response = client.generate_content(f"""
+                Generate a single most relevant emoji icon for the following category:
+                "{category}"
+
+                ### Guidelines:
+                - Respond ONLY with a single emoji.
+                - The emoji must clearly represent the category.
+                - No additional explanation or text.
+            """)
+
+            icon = self.extract_text_from_response(response).strip()
+            # Ensure it's a single emoji character
+            if len(icon) <= 2:
+                return icon
+            else:
+                print(f"Unexpected response: {icon}")
+                return "📋"
+
+        except Exception as exception:
+            print(f"Error generating icon: {exception}")
+            return "📋"
+
         
     def generate_qna(self, content):
         """
