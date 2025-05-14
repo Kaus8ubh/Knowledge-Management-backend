@@ -27,3 +27,6 @@ python-multipart
 weasyprint
 html2docx
 python-magic
+pdfkit
+jinja2
+

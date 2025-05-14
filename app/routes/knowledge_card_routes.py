@@ -61,15 +61,17 @@ async def edit_knowledge_card(details: EditKnowledgeCard):
 
 @knowledge_card_router.get("/{card_id}/download")
 async def download_card(card_id: str, format: str = Query(default="pdf")):
-    """API endpoint to download card """
+    """API endpoint to download a card in the requested format (pdf/docx)."""
     try:
-        return knowledge_card_service.generate_card_document(card_id=card_id, file_format= format)
-    except ValueError as valueerror:
-        raise HTTPException(status_code=400, detail=str(valueerror))
+        return await knowledge_card_service.generate_card_document(card_id=card_id, file_format=format)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail= "card not found")
+        raise HTTPException(status_code=404, detail="Card not found.")
     except PermissionError:
-        raise HTTPException(status_code=403, detail="Not authorized to access this card")
+        raise HTTPException(status_code=403, detail="Not authorized to access this card.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
         
 @knowledge_card_router.put("/{card_id}/favourite")
 async def add_remove_favourite(card_id:str):
