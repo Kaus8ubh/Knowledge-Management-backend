@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: knowledge-backend
+    env: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
