@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 import magic
+import pdfkit
 from app.utils import decode_access_token, scraper, embedder_for_title, gemini_text_processor, get_thumbnail, is_youtube_url, get_video_id, get_yt_transcript_text, pdf_docx_generator, convert_summary_to_html, extract_text_from_pdf, extract_text_from_docx
 from app.models import knowledge_card_model, KnowledgeCardRequest, KnowledgeCard
 from app.dao import knowledge_card_dao, card_cluster_dao, user_dao
@@ -300,37 +301,135 @@ class KnowledgeCardService:
             print(f"Error editing the card: {exception}")
             return None
         
-    def generate_card_document(self, card_id: str, file_format: str = "pdf"):
-        """
-        generate a downloadable document from a knowledge card
-        """
-        card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+    def _build_html_from_card(self, card_data):
+        title = card_data.get("title", "Untitled")
+        created_at = card_data.get("created_at", "")
+        created_at_str = ""
         
+        if created_at:
+            try:
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at)
+                created_at_str = f"<h3><em>Created: {created_at.strftime('%Y-%m-%d')}</em></h3>"
+            except Exception:
+                created_at_str = ""
+
+        source_url = card_data.get("source_url", "")
+        source_str = f"<h3 class='source'><em>Source: {source_url}</em></h3>" if source_url else ""
+
+        html_parts = [f"<h1>{title}</h1>", created_at_str, source_str]
+
+        # Note section (preserves markup)
+        note = card_data.get("note")
+        if note:
+            html_parts.append("<h2>Note:</h2>")
+            html_parts.append(note)  # Assuming it's already valid HTML
+
+        # Summary (optional plain paragraph)
+        summary = card_data.get("summary")
+        if summary:
+            html_parts.append("<h2>Summary:</h2>")
+            html_parts.append(f"<p>{summary}</p>")
+
+        # Q&A Section
+        qna_list = card_data.get("qna", [])
+        if isinstance(qna_list, list) and qna_list:
+            html_parts.append("<h2>Q&A:</h2>")
+            for qa in qna_list:
+                question = qa.get("question", "")
+                answer = qa.get("answer", "")
+                html_parts.append(f"<h3>Q: {question}</h3>")
+                html_parts.append(f"<p><strong>A:</strong> {answer}</p>")
+
+        # Knowledge Map Section
+        knowledge_map = card_data.get("knowledge_map", [])
+        if isinstance(knowledge_map, list) and knowledge_map:
+            html_parts.append("<h2>Knowledge Map:</h2>")
+            for section in knowledge_map:
+                section_name = section.get("section", "")
+                icon = section.get("icon", "")
+                html_parts.append(f"<h3>{icon} {section_name}:</h3>")
+                for item in section.get("items", []):
+                    topic = item.get("topic", "")
+                    description = item.get("description", "")
+                    difficulty = item.get("difficulty", "")
+                    html_parts.append(f"<p><strong>Topic:</strong> {topic}</p>")
+                    html_parts.append(f"<p><strong>Description:</strong> {description}</p>")
+                    html_parts.append(f"<p><strong>Difficulty:</strong> {difficulty}</p>")
+                    html_parts.append("<hr>")
+
+        # Full HTML wrapper
+        full_html = f"""
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; padding: 20px; }}
+                    h1 {{ font-size: 28px; font-weight: bold; }}
+                    h2 {{ font-size: 20px; margin-top: 25px; }}
+                    h3 {{ font-size: 16px; margin-top: 15px; }}
+                    p {{ font-size: 14px; line-height: 1.6; }}
+                    .source {{ color: blue; }}
+                    hr {{ border: 1px solid #ccc; margin: 15px 0; }}
+                </style>
+            </head>
+            <body>
+                {"".join(html_parts)}
+            </body>
+        </html>
+        """
+
+        return full_html
+
+
+
+    
+    async def generate_card_document(self, card_id: str, file_format: str = "pdf"):
+        card = knowledge_card_dao.get_card_by_id(card_id=card_id)
+
         if not card:
             raise FileNotFoundError("Card not found")
-        
-        # # Check if user has access to this card
-        # if card.get("user_id") != user_id:
-        #     raise PermissionError("User doesn't have access to this card")
 
         if file_format.lower() == "pdf":
-            return self._generate_pdf_response(card_data=card)
+            return await self._generate_pdf_response(card_data=card)
         elif file_format.lower() == "docx":
-            return self._generate_docx_response(card_data=card)
+            return await self._generate_docx_response(card_data=card)
         else:
             raise ValueError(f"Unsupported format: {file_format}")
         
-    def _generate_pdf_response(self, card_data):
+    async def _generate_pdf_response(self, card_data):
+        try:
+            # Generate HTML string from card_data
+            html = self._build_html_from_card(card_data)
 
-        pdf_generator = pdf_docx_generator.generate_card_pdf(card_data=card_data)
+            # Use pdfkit to convert HTML to PDF (returns bytes)
+            # You can explicitly configure wkhtmltopdf if needed:
+            config = pdfkit.configuration()  # path not needed if it's in Docker PATH
+            pdf_bytes = pdfkit.from_string(html, False, configuration=config)
 
-        return StreamingResponse(
-            io.BytesIO(pdf_generator),
-            media_type="application/pdf",
-            headers={
-                "Content-Dispositon": f"attachment; filename=card_{card_data['_id']}.pdf0"
-            }
-        )
+            # Return as a downloadable streaming response
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f"attachment; filename=card_{card_data['_id']}.pdf"
+                }
+            )
+        except OSError as os_err:
+            raise HTTPException(
+                status_code=500,
+                detail=f"PDF engine error: {str(os_err)}. Is wkhtmltopdf properly installed?"
+            )
+        except ValueError as val_err:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid input for PDF generation: {str(val_err)}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate PDF: {str(e)}"
+            )
 
     def _generate_docx_response(self, card_data):
 
