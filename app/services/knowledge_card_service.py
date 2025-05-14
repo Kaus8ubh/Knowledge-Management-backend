@@ -132,8 +132,16 @@ class KnowledgeCardService:
                     content = get_yt_transcript_text(source_url)
                     print("transcript done")
                     print(content)
-                    if not content:
-                        return None
+
+                    # If transcript failed, is empty, stop
+                    if not content or "Transcript not available" in content or len(content.split()) < 10:
+                        raise ValueError("Transcript is missing, too short, or not usable for this YouTube video.")
+                    
+                    # English check using common English words
+                    common_words = ["the", "is", "and", "of", "in", "to"]
+                    if not any(word in content.lower() for word in common_words):
+                        raise ValueError("Transcript does not appear to be in English.")
+
                     chunks = scraper.split_content(content)
                 else:
                     # Scrape content from the given URL
@@ -172,7 +180,7 @@ class KnowledgeCardService:
                 source_url=""
                 category=[]
 
-            thumbnail = get_thumbnail(category=category)
+            thumbnail = gemini_text_processor.get_icon(category=category)
             markup_summary = convert_summary_to_html(summary_text=summary)
             created_at=datetime.utcnow().isoformat()
             
